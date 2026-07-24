@@ -31,51 +31,21 @@ export function TrailerForm({ open, onOpenChange, onCreated }: TrailerFormProps)
     defaultValues: { status: "Available", year: new Date().getFullYear() },
   });
 
-  function normalizeTrailerType(value: TrailerFormValues["type"]) {
-    const mapping: Record<string, string> = {
-      flatbed: "flatbed",
-      "low loader": "low_loader",
-      "fuel tanker": "fuel_tanker",
-      "container trailer": "container",
-      "side tipper": "side_tipper",
-      "box trailer": "box",
-      "curtain trailer": "curtain",
-      "refrigerated trailer": "refrigerated",
-      "skeletal trailer": "skeletal",
-      "extendable trailer": "extendable",
-      "livestock trailer": "livestock",
-      other: "other",
-    };
-    return mapping[value.toLowerCase()] || value.toLowerCase().replace(/\s+/g, "_");
-  }
-
-  function normalizeTrailerStatus(value: TrailerFormValues["status"]) {
-    const mapping: Record<string, string> = {
-      available: "available",
-      reserved: "reserved",
-      rented: "rented",
-      "under maintenance": "under_maintenance",
-      damaged: "damaged",
-      retired: "retired",
-    };
-    return mapping[value.toLowerCase()] || value.toLowerCase().replace(/\s+/g, "_");
-  }
-
   async function onSubmit(values: TrailerFormValues) {
     try {
       const created = await api.trailers.create({
-        trailer_number: values.trailerNumber,
-        registration_number: values.registrationNumber,
+        trailerNumber: values.trailerNumber,
+        registrationNumber: values.registrationNumber,
         vin: values.vin,
-        trailer_type: normalizeTrailerType(values.type),
+        type: values.type,
         brand: values.brand,
         model: values.model,
         year: values.year,
         capacity: values.capacity,
-        status: normalizeTrailerStatus(values.status),
-        yard_location: values.location,
-        next_inspection_date: values.nextInspection,
-        insurance_expiry: values.insuranceExpiry,
+        status: values.status,
+        location: values.location,
+        nextInspection: values.nextInspection,
+        insuranceExpiry: values.insuranceExpiry,
       });
       onCreated(created);
       toast.success(`Trailer ${values.trailerNumber} added`);

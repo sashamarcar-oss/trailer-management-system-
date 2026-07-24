@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = "force-dynamic"
+
 import * as React from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
@@ -9,9 +11,9 @@ import { axiosClient } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import {
   AlertCircle, BarChart3, CheckCircle2, Clock, DollarSign,
-  Download, RefreshCw, FileText, Eye,
+  Download, RefreshCw, FileText, FileSignature, Eye,
   Users, Truck, TrendingUp, Calendar,
-  Search, Wrench, PackageCheck, MapPin,
+  Search, Wrench, PackageCheck, MapPin, Receipt, Layers,
 } from "lucide-react"
 import {
   BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
@@ -20,33 +22,46 @@ import {
 } from "recharts"
 
 // ─── NOTE ON DATA SHAPES ────────────────────────────────────────────────────
-// Field names below (trailer_name, client_name, daily_rate, etc.) are my best
-// guess at what your /logistics/* endpoints return, following the same
-// snake_case + fallback pattern as the ApexHR page (r.foo ?? r.fooAlt).
-// Adjust the field lookups in the `safeStr`/`Number(...)` calls below to match
-// your actual backend once you wire this up — the rest of the page (tabs,
-// filters, charts, exports) will keep working unchanged.
+// Same convention as the rest of this page: field names are my best guess at
+// what /logistics/quotations/ and /logistics/invoices/ return, following the
+// snake_case + fallback pattern (r.foo ?? r.fooAlt) used everywhere else here.
+// Adjust the field lookups to match your actual backend — the tabs, filters,
+// charts, and exports will keep working unchanged once the field names line up.
+//
+// NEW IN THIS VERSION:
+//   1. Quotations is now a full Reports + Analytics module (conversion
+//      funnel, pending value, expiring soon).
+//   2. Finance now shows Billed Revenue (from Rentals — what was delivered)
+//      and Collected Revenue (from Invoices/Payments — what was actually
+//      paid) side by side, rather than treating rental totals as "revenue"
+//      outright. They will legitimately differ, and that gap is itself a
+//      useful number (it's roughly your outstanding AR).
+//   3. AR Aging is a new report under Finance, bucketing unpaid invoice
+//      balances into Current / 1-30 / 31-60 / 61-90 / 90+ days overdue.
 
 // ─── Types ────────────────────────────────────────────────────────────────
 type MainTab = "Reports" | "Analytics"
 
-type ReportModule = "Rentals" | "Fleet" | "Clients" | "Finance" | "Maintenance" | "Tax Summary"
+type ReportModule = "Quotations" | "Rentals" | "Fleet" | "Clients" | "Finance" | "Maintenance" | "Tax Summary"
+type QuotationsSubTab = "Quotation Register" | "Pending" | "Expiring Soon"
 type RentalsSubTab = "Rental History" | "Active Rentals" | "Overdue Returns"
 type FleetSubTab = "Trailer Inventory" | "Utilization" | "Maintenance Schedule"
 type ClientsSubTab = "Client Statements" | "Outstanding Payments" | "Client Activity"
-type FinanceSubTab = "Revenue Register" | "Expense Register" | "Profit & Loss"
+type FinanceSubTab = "Revenue Register" | "Invoice Register" | "AR Aging" | "Expense Register" | "Profit & Loss"
 
-type AnalyticsModule = "Utilization" | "Fleet" | "Clients" | "Finance" | "Maintenance"
+type AnalyticsModule = "Quotations" | "Utilization" | "Fleet" | "Clients" | "Finance" | "Maintenance"
+type QuotationsAnalyticsSubTab = "Overview" | "Conversion Funnel"
 type UtilizationSubTab = "Overview" | "Trends"
 type FleetAnalyticsSubTab = "Overview" | "By Type"
 type ClientsAnalyticsSubTab = "Overview" | "Top Clients"
 type FinanceAnalyticsSubTab = "Overview" | "Trends"
 
-const REPORT_MODULES: ReportModule[] = ["Rentals", "Fleet", "Clients", "Finance", "Maintenance", "Tax Summary"]
-const ANALYTICS_MODULES: AnalyticsModule[] = ["Utilization", "Fleet", "Clients", "Finance", "Maintenance"]
+const REPORT_MODULES: ReportModule[] = ["Quotations", "Rentals", "Fleet", "Clients", "Finance", "Maintenance", "Tax Summary"]
+const ANALYTICS_MODULES: AnalyticsModule[] = ["Quotations", "Utilization", "Fleet", "Clients", "Finance", "Maintenance"]
 const CHART_COLORS = ["#0F6E56", "#10B981", "#F59E0B", "#6366F1", "#EF4444", "#3B82F6", "#EC4899"]
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"]
 const EXPENSE_CATEGORIES = ["Fuel", "Repairs", "Insurance", "Permits & Licensing", "Tolls", "Staff", "Other"]
+const AGING_BUCKET_COLORS = ["#0F6E56", "#F59E0B", "#F97316", "#EF4444", "#B91C1C"]
 
 // ─── Currency / date helpers ────────────────────────────────────────────────
 const ksh = (v: number) => `Ksh ${v.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -105,6 +120,77 @@ function resolveMonthRange(mode: "This Month" | "Last Month" | "This Year" | "Cu
   const start = new Date(year, month, 1)
   const end = new Date(year, month + 1, 1)
   return { start, end, label: `${MONTH_NAMES[month]} ${year}` }
+}
+
+// ─── Invoice aging helpers ──────────────────────────────────────────────────
+// Mirrors the logic used on the standalone Invoices page — kept local here
+// since this file is self-contained, but the bucket definitions must match
+// invoice-utils.ts exactly or the two pages will disagree with each other.
+type AgingBucket = "Current" | "1-30" | "31-60" | "61-90" | "90+"
+
+function invoiceBalance(inv: Record<string, unknown>): number {
+  const total = Number(inv.total_amount ?? inv.total ?? inv.amount) || 0
+  const paid = Number(inv.amount_paid ?? inv.paid_amount) || 0
+  const explicit = inv.balance
+  return explicit !== undefined && explicit !== null ? Number(explicit) || 0 : Math.max(total - paid, 0)
+}
+
+function invoiceStatus(inv: Record<string, unknown>): string {
+  return safeStr(inv.status) || "Draft"
+}
+
+function invoiceDaysOverdue(inv: Record<string, unknown>): number {
+  const status = invoiceStatus(inv).toLowerCase()
+  if (status === "paid" || status === "void") return 0
+  const due = inv.due_date || inv.dueDate
+  if (!due) return 0
+  const d = new Date(due as string)
+  if (isNaN(d.getTime())) return 0
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000))
+}
+
+function isInvoiceOverdue(inv: Record<string, unknown>): boolean {
+  return invoiceDaysOverdue(inv) > 0 && invoiceBalance(inv) > 0
+}
+
+function agingBucketFor(inv: Record<string, unknown>): AgingBucket {
+  const balance = invoiceBalance(inv)
+  if (balance <= 0) return "Current"
+  const d = invoiceDaysOverdue(inv)
+  if (d === 0) return "Current"
+  if (d <= 30) return "1-30"
+  if (d <= 60) return "31-60"
+  if (d <= 90) return "61-90"
+  return "90+"
+}
+
+function computeAgingSummary(invoices: Record<string, unknown>[]) {
+  const buckets: Record<AgingBucket, number> = { Current: 0, "1-30": 0, "31-60": 0, "61-90": 0, "90+": 0 }
+  invoices.forEach((inv) => {
+    if (invoiceStatus(inv).toLowerCase() === "void") return
+    const bal = invoiceBalance(inv)
+    if (bal <= 0) return
+    buckets[agingBucketFor(inv)] += bal
+  })
+  return buckets
+}
+
+// ─── Quotation helpers ──────────────────────────────────────────────────────
+function quotationStatus(q: Record<string, unknown>): string {
+  return safeStr(q.status) || "Draft"
+}
+function quotationAmount(q: Record<string, unknown>): number {
+  return Number(q.total_amount ?? q.total ?? q.value ?? q.amount) || 0
+}
+function isQuotationExpiringSoon(q: Record<string, unknown>, withinDays = 7): boolean {
+  const status = quotationStatus(q).toLowerCase()
+  if (["expired", "converted", "rejected"].includes(status)) return false
+  const expiry = q.expiry_date || q.expiryDate
+  if (!expiry) return false
+  const d = new Date(expiry as string)
+  if (isNaN(d.getTime())) return false
+  const days = Math.floor((d.getTime() - Date.now()) / 86400000)
+  return days >= 0 && days <= withinDays
 }
 
 // ─── UI Components (shared look & feel) ────────────────────────────────────
@@ -266,9 +352,9 @@ function CardTitle({ children, className }: React.HTMLAttributes<HTMLHeadingElem
 function StatusBadge({ status }: { status: string }) {
   const s = status.toLowerCase()
   const cls =
-    s === "completed" || s === "active" || s === "available" || s === "paid"
+    s === "completed" || s === "active" || s === "available" || s === "paid" || s === "accepted" || s === "converted"
       ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
-      : s === "pending" || s === "in transit" || s === "scheduled"
+      : s === "pending" || s === "in transit" || s === "scheduled" || s === "sent" || s === "viewed" || s === "partially paid" || s === "draft"
       ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
       : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{status}</span>
@@ -281,19 +367,29 @@ function pieLabel({ name, percent }: { name?: string; percent?: number }) {
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function TrailerReportsPage() {
+  return (
+    <React.Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading reports…</div>}>
+      <TrailerReportsPageContent />
+    </React.Suspense>
+  )
+}
+
+function TrailerReportsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
   const [mainTab, setMainTab] = useState<MainTab>("Reports")
-  const [reportModule, setReportModule] = useState<ReportModule>("Rentals")
-  const [analyticsModule, setAnalyticsModule] = useState<AnalyticsModule>("Utilization")
+  const [reportModule, setReportModule] = useState<ReportModule>("Quotations")
+  const [analyticsModule, setAnalyticsModule] = useState<AnalyticsModule>("Quotations")
 
+  const [quotationsSubTab, setQuotationsSubTab] = useState<QuotationsSubTab>("Quotation Register")
   const [rentalsSubTab, setRentalsSubTab] = useState<RentalsSubTab>("Rental History")
   const [fleetSubTab, setFleetSubTab] = useState<FleetSubTab>("Trailer Inventory")
   const [clientsSubTab, setClientsSubTab] = useState<ClientsSubTab>("Client Statements")
   const [financeSubTab, setFinanceSubTab] = useState<FinanceSubTab>("Revenue Register")
 
+  const [quotationsAnalyticsSubTab, setQuotationsAnalyticsSubTab] = useState<QuotationsAnalyticsSubTab>("Overview")
   const [utilSubTab, setUtilSubTab] = useState<UtilizationSubTab>("Overview")
   const [fleetAnalyticsSubTab, setFleetAnalyticsSubTab] = useState<FleetAnalyticsSubTab>("Overview")
   const [clientsAnalyticsSubTab, setClientsAnalyticsSubTab] = useState<ClientsAnalyticsSubTab>("Overview")
@@ -311,6 +407,8 @@ export default function TrailerReportsPage() {
   const [rentalYear, setRentalYear] = useState(new Date().getFullYear())
 
   // ── data ──
+  const [quotations, setQuotations] = useState<Record<string, unknown>[]>([])
+  const [invoices, setInvoices] = useState<Record<string, unknown>[]>([])
   const [rentals, setRentals] = useState<Record<string, unknown>[]>([])
   const [trailers, setTrailers] = useState<Record<string, unknown>[]>([])
   const [clients, setClients] = useState<Record<string, unknown>[]>([])
@@ -334,23 +432,31 @@ export default function TrailerReportsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError("")
     try {
-      const [rentalsRes, trailersRes, clientsRes, expensesRes, maintenanceRes] = await Promise.all([
-        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/logistics/rentals/").catch(
+      const [quotationsRes, invoicesRes, rentalsRes, trailersRes, clientsRes, expensesRes, maintenanceRes] = await Promise.all([
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/quotations/", { params: { page_size: 1000 } }).catch(
           (): { data: Record<string, unknown>[] } => ({ data: [] })
         ),
-        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/logistics/trailers/").catch(
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/invoices/", { params: { page_size: 1000 } }).catch(
           (): { data: Record<string, unknown>[] } => ({ data: [] })
         ),
-        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/logistics/clients/").catch(
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/rentals/", { params: { page_size: 1000 } }).catch(
           (): { data: Record<string, unknown>[] } => ({ data: [] })
         ),
-        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/logistics/expenses/").catch(
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/trailers/", { params: { page_size: 1000 } }).catch(
           (): { data: Record<string, unknown>[] } => ({ data: [] })
         ),
-        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/logistics/maintenance/").catch(
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/clients/", { params: { page_size: 1000 } }).catch(
+          (): { data: Record<string, unknown>[] } => ({ data: [] })
+        ),
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/expenses/", { params: { page_size: 1000 } }).catch(
+          (): { data: Record<string, unknown>[] } => ({ data: [] })
+        ),
+        axiosClient.get<Record<string, unknown>[] | { results: Record<string, unknown>[] }>("/trailers/maintenance-records/", { params: { page_size: 1000 } }).catch(
           (): { data: Record<string, unknown>[] } => ({ data: [] })
         ),
       ])
+      setQuotations(extractResults<Record<string, unknown>>(quotationsRes?.data))
+      setInvoices(extractResults<Record<string, unknown>>(invoicesRes?.data))
       setRentals(extractResults<Record<string, unknown>>(rentalsRes?.data))
       setTrailers(extractResults<Record<string, unknown>>(trailersRes?.data))
       setClients(extractResults<Record<string, unknown>>(clientsRes?.data))
@@ -364,17 +470,75 @@ export default function TrailerReportsPage() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    const refresh = window.setInterval(load, 30_000)
+    return () => window.clearInterval(refresh)
+  }, [load])
 
   const start = useMemo(() => startDateForRange(range), [range])
+
+  // ── Quotations ──
+  const filteredQuotations = useMemo(() => quotations.filter((q) => {
+    const clientName = safeStr(q.client_name || q.client).toLowerCase()
+    const number = safeStr(q.quotation_number || q.number).toLowerCase()
+    if (searchQuery && !clientName.includes(searchQuery.toLowerCase()) && !number.includes(searchQuery.toLowerCase())) return false
+    if (statusFilter !== "All" && quotationStatus(q) !== statusFilter) return false
+    return true
+  }), [quotations, searchQuery, statusFilter])
+
+  const pendingQuotations = useMemo(
+    () => quotations.filter((q) => ["draft", "sent", "viewed"].includes(quotationStatus(q).toLowerCase())),
+    [quotations],
+  )
+  const expiringSoonQuotations = useMemo(() => quotations.filter((q) => isQuotationExpiringSoon(q)), [quotations])
+  const acceptedOrConvertedQuotations = useMemo(
+    () => quotations.filter((q) => ["accepted", "converted"].includes(quotationStatus(q).toLowerCase())),
+    [quotations],
+  )
+  const convertedQuotations = useMemo(
+    () => quotations.filter((q) => quotationStatus(q).toLowerCase() === "converted"),
+    [quotations],
+  )
+  const sentOrLaterQuotations = useMemo(
+    () => quotations.filter((q) => quotationStatus(q).toLowerCase() !== "draft"),
+    [quotations],
+  )
+
+  const quotationTotals = useMemo(() => ({
+    total: quotations.length,
+    pendingValue: pendingQuotations.reduce((s, q) => s + quotationAmount(q), 0),
+    conversionRate: sentOrLaterQuotations.length ? Math.round((convertedQuotations.length / sentOrLaterQuotations.length) * 100) : 0,
+    expiringSoon: expiringSoonQuotations.length,
+  }), [quotations, pendingQuotations, sentOrLaterQuotations, convertedQuotations, expiringSoonQuotations])
+
+  const quotationFunnelData = useMemo(() => [
+    { stage: "Total Created", count: quotations.length },
+    { stage: "Sent", count: sentOrLaterQuotations.length },
+    { stage: "Accepted", count: acceptedOrConvertedQuotations.length },
+    { stage: "Converted to Rental", count: convertedQuotations.length },
+  ], [quotations, sentOrLaterQuotations, acceptedOrConvertedQuotations, convertedQuotations])
 
   // ── Rentals ──
   const rentalStatus = (r: Record<string, unknown>) => safeStr(r.status).toLowerCase()
 
+  // Multi-trailer aware: a rental may carry `trailers: [...]` (current shape)
+  // or a single `trailer_name`/`trailer` field (legacy shape). This renders
+  // sensibly either way rather than assuming one trailer per rental.
+  function rentalTrailerLabel(r: Record<string, unknown>): string {
+    const list = r.trailers
+    if (Array.isArray(list) && list.length > 0) {
+      const names = list.map((t) => safeStr((t as Record<string, unknown>).trailer_name ?? (t as Record<string, unknown>).name)).filter(Boolean)
+      if (names.length === 0) return "—"
+      return names.length === 1 ? names[0] : `${names[0]} +${names.length - 1} more`
+    }
+    return safeStr(r.trailer_name || r.trailer) || "—"
+  }
+
   const activeRentals = useMemo(() => rentals.filter((r) => rentalStatus(r) === "active"), [rentals])
   const overdueRentals = useMemo(() => rentals.filter((r) => {
     if (rentalStatus(r) !== "active") return false
-    const due = r.end_date || r.due_date
+    const due = r.end_date || r.due_date || r.scheduled_return_date
     if (!due) return false
     return new Date(due as string) < new Date()
   }), [rentals])
@@ -389,18 +553,21 @@ export default function TrailerReportsPage() {
   }), [rentals, rentalMonthRange])
 
   const filteredRentalHistory = useMemo(() => rentals.filter((r) => {
-    const trailerName = safeStr(r.trailer_name || r.trailer).toLowerCase()
+    const trailerName = rentalTrailerLabel(r).toLowerCase()
     const clientName = safeStr(r.client_name || r.client).toLowerCase()
     if (searchQuery && !trailerName.includes(searchQuery.toLowerCase()) && !clientName.includes(searchQuery.toLowerCase())) return false
     if (statusFilter !== "All" && safeStr(r.status) !== statusFilter) return false
     return true
   }), [rentals, searchQuery, statusFilter])
 
+  // "Billed" revenue — what rentals say was delivered/charged, independent of
+  // whether it's been collected yet. This intentionally does NOT equal
+  // invoiceTotals.collected below; the gap between them is your AR.
   const rentalTotals = useMemo(() => ({
     total: rentals.length,
     active: activeRentals.length,
     overdue: overdueRentals.length,
-    revenue: rentals.reduce((s, r) => s + (Number(r.total_amount ?? r.amount) || 0), 0),
+    billedRevenue: rentals.reduce((s, r) => s + (Number(r.total_amount ?? r.total ?? r.amount) || 0), 0),
   }), [rentals, activeRentals, overdueRentals])
 
   // ── Fleet ──
@@ -434,7 +601,13 @@ export default function TrailerReportsPage() {
 
   const utilizationByTrailer = useMemo(() =>
     trailers.map((t) => {
-      const rentalsForTrailer = rentals.filter((r) => safeStr(r.trailer_id ?? r.trailer) === safeStr(t.id))
+      const rentalsForTrailer = rentals.filter((r) => {
+        const list = r.trailers
+        if (Array.isArray(list) && list.length > 0) {
+          return list.some((line) => safeStr((line as Record<string, unknown>).trailer_id ?? (line as Record<string, unknown>).trailerId) === safeStr(t.id))
+        }
+        return safeStr(r.trailer_id ?? r.trailer) === safeStr(t.id)
+      })
       const daysRented = rentalsForTrailer.reduce((s, r) => {
         const sD = r.start_date ? new Date(r.start_date as string) : null
         const eD = r.end_date ? new Date(r.end_date as string) : new Date()
@@ -484,7 +657,7 @@ export default function TrailerReportsPage() {
       .slice(0, 8)
   }, [clients])
 
-  // ── Finance ──
+  // ── Finance: Billed (Rentals) ──
   const filteredExpenses = useMemo(() => expenses.filter((e) => {
     if (!e.date) return false
     const d = parseDate(e.date)
@@ -495,9 +668,40 @@ export default function TrailerReportsPage() {
     return true
   }), [expenses, range, start, expCatFilter, statusFilter])
 
-  const revenueTotal = rentalTotals.revenue
+  const billedRevenue = rentalTotals.billedRevenue
   const expenseTotal = useMemo(() => filteredExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0), [filteredExpenses])
-  const profitLoss = revenueTotal - expenseTotal
+  const billedProfitLoss = billedRevenue - expenseTotal
+
+  // ── Finance: Collected (Invoices/Payments) ──
+  const filteredInvoices = useMemo(() => invoices.filter((inv) => {
+    const clientName = safeStr(inv.client_name || inv.client).toLowerCase()
+    const number = safeStr(inv.invoice_number || inv.number).toLowerCase()
+    if (searchQuery && !clientName.includes(searchQuery.toLowerCase()) && !number.includes(searchQuery.toLowerCase())) return false
+    if (statusFilter !== "All" && invoiceStatus(inv) !== statusFilter) return false
+    return true
+  }), [invoices, searchQuery, statusFilter])
+
+  const invoiceTotals = useMemo(() => {
+    const totalInvoiced = invoices.reduce((s, inv) => s + (Number(inv.total_amount ?? inv.total ?? inv.amount) || 0), 0)
+    const totalOutstanding = invoices.reduce((s, inv) => s + invoiceBalance(inv), 0)
+    const totalCollected = totalInvoiced - totalOutstanding
+    const overdueCount = invoices.filter(isInvoiceOverdue).length
+    const overdueAmount = invoices.filter(isInvoiceOverdue).reduce((s, inv) => s + invoiceBalance(inv), 0)
+    return { totalInvoiced, totalCollected, totalOutstanding, overdueCount, overdueAmount }
+  }, [invoices])
+
+  const collectedProfitLoss = invoiceTotals.totalCollected - expenseTotal
+
+  const agingSummary = useMemo(() => computeAgingSummary(invoices), [invoices])
+  const agingChartData = useMemo(() => (
+    (["Current", "1-30", "31-60", "61-90", "90+"] as AgingBucket[]).map((bucket) => ({ bucket, amount: agingSummary[bucket] }))
+  ), [agingSummary])
+
+  const invoiceStatusBreakdown = useMemo(() => {
+    const map: Record<string, number> = {}
+    invoices.forEach((inv) => { const s = invoiceStatus(inv); map[s] = (map[s] || 0) + 1 })
+    return Object.entries(map).map(([name, value]) => ({ name, value }))
+  }, [invoices])
 
   const categoryChartData = useMemo(() => {
     const map: Record<string, number> = {}
@@ -506,7 +710,7 @@ export default function TrailerReportsPage() {
   }, [filteredExpenses])
 
   const revenueTrendData = useMemo(() => {
-    const map: Record<string, { key: string; label: string; revenue: number; expenses: number }> = {}
+    const map: Record<string, { key: string; label: string; billed: number; collected: number; expenses: number }> = {}
     rentals.forEach((r) => {
       const raw = r.start_date || r.created_at
       if (!raw) return
@@ -514,8 +718,20 @@ export default function TrailerReportsPage() {
       if (isNaN(d.getTime())) return
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
       const label = `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`
-      if (!map[key]) map[key] = { key, label, revenue: 0, expenses: 0 }
-      map[key].revenue += Number(r.total_amount ?? r.amount) || 0
+      if (!map[key]) map[key] = { key, label, billed: 0, collected: 0, expenses: 0 }
+      map[key].billed += Number(r.total_amount ?? r.total ?? r.amount) || 0
+    })
+    invoices.forEach((inv) => {
+      const raw = inv.date || inv.issue_date
+      if (!raw) return
+      const d = new Date(raw as string)
+      if (isNaN(d.getTime())) return
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const label = `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`
+      const totalAmt = Number(inv.total_amount ?? inv.total ?? inv.amount) || 0
+      const collectedAmt = totalAmt - invoiceBalance(inv)
+      if (!map[key]) map[key] = { key, label, billed: 0, collected: 0, expenses: 0 }
+      map[key].collected += collectedAmt
     })
     expenses.forEach((e) => {
       if (!e.date) return
@@ -523,11 +739,13 @@ export default function TrailerReportsPage() {
       if (isNaN(d.getTime())) return
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
       const label = `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`
-      if (!map[key]) map[key] = { key, label, revenue: 0, expenses: 0 }
+      if (!map[key]) map[key] = { key, label, billed: 0, collected: 0, expenses: 0 }
       map[key].expenses += Number(e.amount) || 0
     })
-    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key)).map((m) => ({ name: m.label, revenue: m.revenue, expenses: m.expenses, profit: m.revenue - m.expenses }))
-  }, [rentals, expenses])
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key)).map((m) => ({
+      name: m.label, billed: m.billed, collected: m.collected, expenses: m.expenses,
+    }))
+  }, [rentals, invoices, expenses])
 
   // ── Maintenance ──
   const filteredMaintenance = useMemo(() => maintenance.filter((m) => {
@@ -551,12 +769,21 @@ export default function TrailerReportsPage() {
     a.click()
   }
 
+  const exportQuotationsCSV = () => csvDownload("quotation-register", [
+    "Quotation Register",
+    "Quotation ID,Client,Issued,Expiry,Amount,Status",
+    ...filteredQuotations.map((q) =>
+      [safeStr(q.id), safeStr(q.client_name || q.client), safeStr(q.issue_date || q.created_at),
+        safeStr(q.expiry_date), quotationAmount(q), quotationStatus(q)].join(",")
+    ),
+  ])
+
   const exportRentalHistoryCSV = () => csvDownload("rental-history", [
     "Rental History",
-    "Rental ID,Trailer,Client,Start Date,End Date,Daily Rate,Total Amount,Status",
+    "Rental ID,Trailer(s),Client,Start Date,End Date,Total Amount,Status",
     ...filteredRentalHistory.map((r) =>
-      [safeStr(r.id), safeStr(r.trailer_name || r.trailer), safeStr(r.client_name || r.client), safeStr(r.start_date),
-        safeStr(r.end_date), Number(r.daily_rate) || 0, Number(r.total_amount ?? r.amount) || 0, safeStr(r.status)].join(",")
+      [safeStr(r.id), rentalTrailerLabel(r), safeStr(r.client_name || r.client), safeStr(r.start_date),
+        safeStr(r.end_date), Number(r.total_amount ?? r.total ?? r.amount) || 0, safeStr(r.status)].join(",")
     ),
   ])
 
@@ -578,13 +805,30 @@ export default function TrailerReportsPage() {
     ),
   ])
 
-  const exportRevenueCSV = () => csvDownload("revenue-report", [
-    "Revenue Report",
-    "Rental ID,Trailer,Client,Date,Amount,Status",
+  const exportRevenueCSV = () => csvDownload("billed-revenue-report", [
+    "Billed Revenue Report (Rentals)",
+    "Rental ID,Trailer(s),Client,Date,Amount,Status",
     ...rentals.map((r) =>
-      [safeStr(r.id), safeStr(r.trailer_name || r.trailer), safeStr(r.client_name || r.client),
-        safeStr(r.start_date), Number(r.total_amount ?? r.amount) || 0, safeStr(r.status)].join(",")
+      [safeStr(r.id), rentalTrailerLabel(r), safeStr(r.client_name || r.client),
+        safeStr(r.start_date), Number(r.total_amount ?? r.total ?? r.amount) || 0, safeStr(r.status)].join(",")
     ),
+  ])
+
+  const exportInvoicesCSV = () => csvDownload("invoice-register", [
+    "Invoice Register",
+    "Invoice ID,Client,Date,Due,Total,Paid,Balance,Status",
+    ...filteredInvoices.map((inv) => {
+      const total = Number(inv.total_amount ?? inv.total ?? inv.amount) || 0
+      const balance = invoiceBalance(inv)
+      return [safeStr(inv.id), safeStr(inv.client_name || inv.client), safeStr(inv.date || inv.issue_date),
+        safeStr(inv.due_date), total, (total - balance).toFixed(2), balance.toFixed(2), invoiceStatus(inv)].join(",")
+    }),
+  ])
+
+  const exportAgingCSV = () => csvDownload("ar-aging", [
+    "AR Aging Summary",
+    "Bucket,Amount",
+    ...agingChartData.map((b) => [b.bucket, b.amount.toFixed(2)].join(",")),
   ])
 
   const exportExpensesCSV = () => csvDownload("expense-report", [
@@ -597,10 +841,9 @@ export default function TrailerReportsPage() {
 
   const exportProfitLossCSV = () => csvDownload("profit-loss", [
     "Profit & Loss",
-    "Metric,Amount",
-    `Total Revenue,${revenueTotal}`,
-    `Total Expenses,${expenseTotal}`,
-    `Net Profit / Loss,${profitLoss}`,
+    "Basis,Revenue,Expenses,Net Profit / Loss",
+    `Billed (Rentals),${billedRevenue},${expenseTotal},${billedProfitLoss}`,
+    `Collected (Invoices),${invoiceTotals.totalCollected},${expenseTotal},${collectedProfitLoss}`,
   ])
 
   const exportMaintenanceCSV = () => csvDownload("maintenance-schedule", [
@@ -615,9 +858,11 @@ export default function TrailerReportsPage() {
   const exportTaxSummaryCSV = () => csvDownload("tax-summary", [
     "Tax Summary",
     "Metric,Amount",
-    `Gross Revenue,${revenueTotal}`,
+    `Gross Revenue (Billed),${billedRevenue}`,
+    `Gross Revenue (Collected),${invoiceTotals.totalCollected}`,
     `Deductible Expenses,${expenseTotal}`,
-    `Taxable Profit,${profitLoss}`,
+    `Taxable Profit (Billed basis),${billedProfitLoss}`,
+    `Taxable Profit (Collected/cash basis),${collectedProfitLoss}`,
   ])
 
   // ── Loading / Error ──
@@ -648,7 +893,7 @@ export default function TrailerReportsPage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
-            <p className="text-sm text-teal-600 mt-0.5">Fleet, rentals, clients, and finance reporting</p>
+            <p className="text-sm text-teal-600 mt-0.5">Quotations, rentals, fleet, clients, and finance reporting</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 border border-input rounded-lg text-sm font-medium hover:bg-accent">
@@ -666,6 +911,7 @@ export default function TrailerReportsPage() {
       {mainTab === "Reports" ? (
         <ModuleNav modules={REPORT_MODULES} active={reportModule} onChange={handleReportModule}
           icons={{
+            Quotations: <FileSignature className="w-4 h-4" />,
             Rentals: <PackageCheck className="w-4 h-4" />,
             Fleet: <Truck className="w-4 h-4" />,
             Clients: <Users className="w-4 h-4" />,
@@ -676,6 +922,7 @@ export default function TrailerReportsPage() {
       ) : (
         <ModuleNav modules={ANALYTICS_MODULES} active={analyticsModule} onChange={handleAnalyticsModule}
           icons={{
+            Quotations: <FileSignature className="w-4 h-4" />,
             Utilization: <TrendingUp className="w-4 h-4" />,
             Fleet: <Truck className="w-4 h-4" />,
             Clients: <Users className="w-4 h-4" />,
@@ -689,6 +936,97 @@ export default function TrailerReportsPage() {
         {/* ══════════════ REPORTS ══════════════ */}
         {mainTab === "Reports" && (
           <>
+            {/* ─── Quotations ─── */}
+            {reportModule === "Quotations" && (
+              <section className="space-y-5">
+                <SubTabBar tabs={["Quotation Register", "Pending", "Expiring Soon"] as QuotationsSubTab[]} active={quotationsSubTab} onChange={setQuotationsSubTab} />
+
+                {quotationsSubTab === "Quotation Register" && (
+                  <div className="space-y-5">
+                    <div className="flex flex-wrap gap-3 items-center">
+                      <div className="relative flex-1 min-w-[220px] max-w-sm">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search by client or quotation #..."
+                          className="pl-9 pr-4 py-2 rounded-lg border border-input bg-card text-sm w-full focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                      </div>
+                      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 rounded-lg border border-input bg-card text-sm">
+                        <option value="All">All Status</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Sent">Sent</option>
+                        <option value="Accepted">Accepted</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Converted">Converted</option>
+                      </select>
+                      <div className="ml-auto"><ExportBtn onClick={exportQuotationsCSV} label="Export" variant="teal" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                      <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
+                      <StatCard label="Pending Value" value={ksh(quotationTotals.pendingValue)} valueClass="text-amber-600" sub={`${pendingQuotations.length} open`} icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
+                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" sub="sent → converted" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" sub="within 7 days" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
+                    </div>
+                    <DataTable
+                      headers={["QUOTATION #", "CLIENT", "ISSUED", "EXPIRY", "AMOUNT", "STATUS", "ACTIONS"]}
+                      emptyMsg="No quotations match the current filters."
+                      rows={filteredQuotations.slice(0, 30).map((q) => [
+                        <span className="font-mono text-foreground">{safeStr(q.quotation_number || q.number || q.id)}</span>,
+                        <span className="font-medium">{safeStr(q.client_name || q.client) || "—"}</span>,
+                        <span className="text-muted-foreground whitespace-nowrap">{safeStr(q.issue_date || q.created_at) || "—"}</span>,
+                        <span className={isQuotationExpiringSoon(q) ? "text-amber-600 font-semibold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{safeStr(q.expiry_date) || "—"}</span>,
+                        <span className="font-semibold">{ksh(quotationAmount(q))}</span>,
+                        <StatusBadge status={quotationStatus(q)} />,
+                        <Link href={`/quotations/${safeStr(q.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                      ])}
+                    />
+                  </div>
+                )}
+
+                {quotationsSubTab === "Pending" && (
+                  <div className="space-y-5">
+                    <SectionHeader title="Pending Quotations" sub="Draft, sent, or viewed — not yet accepted or rejected" />
+                    <DataTable
+                      headers={["QUOTATION #", "CLIENT", "ISSUED", "EXPIRY", "AMOUNT", "STATUS"]}
+                      emptyMsg="No pending quotations."
+                      rows={pendingQuotations.map((q) => [
+                        <span className="font-mono">{safeStr(q.quotation_number || q.number || q.id)}</span>,
+                        <span className="font-medium">{safeStr(q.client_name || q.client) || "—"}</span>,
+                        <span className="text-muted-foreground">{safeStr(q.issue_date || q.created_at) || "—"}</span>,
+                        <span className="text-muted-foreground">{safeStr(q.expiry_date) || "—"}</span>,
+                        <span className="font-semibold">{ksh(quotationAmount(q))}</span>,
+                        <StatusBadge status={quotationStatus(q)} />,
+                      ])}
+                    />
+                  </div>
+                )}
+
+                {quotationsSubTab === "Expiring Soon" && (
+                  <div className="space-y-5">
+                    <SectionHeader title="Expiring Soon" sub="Quotations expiring within 7 days that haven't been resolved" />
+                    {expiringSoonQuotations.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                        <CheckCircle2 className="w-12 h-12 text-muted-foreground/30" />
+                        <p className="text-lg font-semibold text-foreground">Nothing Expiring Soon</p>
+                        <p className="text-sm text-teal-600">All open quotations have runway</p>
+                      </div>
+                    ) : (
+                      <DataTable
+                        headers={["QUOTATION #", "CLIENT", "EXPIRY", "AMOUNT", "STATUS"]}
+                        rows={expiringSoonQuotations.map((q) => [
+                          <span className="font-mono">{safeStr(q.quotation_number || q.number || q.id)}</span>,
+                          <span className="font-medium">{safeStr(q.client_name || q.client) || "—"}</span>,
+                          <span className="font-semibold text-amber-600">{safeStr(q.expiry_date) || "—"}</span>,
+                          <span className="font-semibold">{ksh(quotationAmount(q))}</span>,
+                          <StatusBadge status={quotationStatus(q)} />,
+                        ])}
+                      />
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* ─── Rentals ─── */}
             {reportModule === "Rentals" && (
               <section className="space-y-5">
@@ -706,8 +1044,8 @@ export default function TrailerReportsPage() {
                       <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 rounded-lg border border-input bg-card text-sm">
                         <option value="All">All Status</option>
                         <option value="Active">Active</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Overdue">Overdue</option>
+                        <option value="Returned">Returned</option>
+                        <option value="Cancelled">Cancelled</option>
                       </select>
                       <div className="ml-auto"><ExportBtn onClick={exportRentalHistoryCSV} label="Export" variant="teal" /></div>
                     </div>
@@ -715,19 +1053,18 @@ export default function TrailerReportsPage() {
                       <StatCard label="Total Rentals" value={String(rentalTotals.total)} valueClass="text-blue-600" icon={<PackageCheck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Active Rentals" value={String(rentalTotals.active)} valueClass="text-teal-700" icon={<Truck className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
                       <StatCard label="Overdue Returns" value={String(rentalTotals.overdue)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
-                      <StatCard label="Total Revenue" value={ksh(rentalTotals.revenue)} valueClass="text-purple-600" icon={<DollarSign className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-100" />
+                      <StatCard label="Billed Revenue" value={ksh(rentalTotals.billedRevenue)} valueClass="text-purple-600" sub="what rentals charged, not necessarily collected" icon={<DollarSign className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-100" />
                     </div>
                     <DataTable
-                      headers={["RENTAL ID", "TRAILER", "CLIENT", "START DATE", "END DATE", "DAILY RATE", "TOTAL", "STATUS", "ACTIONS"]}
+                      headers={["RENTAL ID", "TRAILER(S)", "CLIENT", "START DATE", "END DATE", "TOTAL", "STATUS", "ACTIONS"]}
                       emptyMsg="No rentals match the current filters."
                       rows={filteredRentalHistory.slice(0, 30).map((r) => [
                         <span className="font-mono text-foreground">{safeStr(r.id)}</span>,
-                        <span className="font-medium">{safeStr(r.trailer_name || r.trailer) || "—"}</span>,
+                        <span className="font-medium">{rentalTrailerLabel(r)}</span>,
                         <span className="text-muted-foreground">{safeStr(r.client_name || r.client) || "—"}</span>,
                         <span className="text-muted-foreground whitespace-nowrap">{safeStr(r.start_date) || "—"}</span>,
                         <span className="text-muted-foreground whitespace-nowrap">{safeStr(r.end_date) || "—"}</span>,
-                        <span>{ksh(Number(r.daily_rate) || 0)}</span>,
-                        <span className="font-semibold">{ksh(Number(r.total_amount ?? r.amount) || 0)}</span>,
+                        <span className="font-semibold">{ksh(Number(r.total_amount ?? r.total ?? r.amount) || 0)}</span>,
                         <StatusBadge status={safeStr(r.status) || "Active"} />,
                         <button className="p-1.5 rounded hover:bg-muted text-muted-foreground"><Eye className="w-4 h-4" /></button>,
                       ])}
@@ -739,15 +1076,14 @@ export default function TrailerReportsPage() {
                   <div className="space-y-5">
                     <SectionHeader title="Active Rentals" sub="Trailers currently out with clients" />
                     <DataTable
-                      headers={["TRAILER", "CLIENT", "PICKUP LOCATION", "START DATE", "EXPECTED RETURN", "DAILY RATE"]}
+                      headers={["TRAILER(S)", "CLIENT", "PICKUP LOCATION", "START DATE", "EXPECTED RETURN"]}
                       emptyMsg="No active rentals."
                       rows={activeRentals.map((r) => [
-                        <span className="font-medium">{safeStr(r.trailer_name || r.trailer) || "—"}</span>,
+                        <span className="font-medium">{rentalTrailerLabel(r)}</span>,
                         <span className="text-muted-foreground">{safeStr(r.client_name || r.client) || "—"}</span>,
                         <span className="text-muted-foreground flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{safeStr(r.pickup_location) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(r.start_date) || "—"}</span>,
-                        <span className="text-muted-foreground">{safeStr(r.end_date || r.due_date) || "—"}</span>,
-                        <span>{ksh(Number(r.daily_rate) || 0)}</span>,
+                        <span className="text-muted-foreground">{safeStr(r.end_date || r.scheduled_return_date) || "—"}</span>,
                       ])}
                     />
                   </div>
@@ -764,16 +1100,15 @@ export default function TrailerReportsPage() {
                       </div>
                     ) : (
                       <DataTable
-                        headers={["TRAILER", "CLIENT", "EXPECTED RETURN", "DAYS OVERDUE", "DAILY RATE"]}
+                        headers={["TRAILER(S)", "CLIENT", "EXPECTED RETURN", "DAYS OVERDUE"]}
                         rows={overdueRentals.map((r) => {
-                          const due = new Date((r.end_date || r.due_date) as string)
+                          const due = new Date((r.end_date || r.due_date || r.scheduled_return_date) as string)
                           const daysOverdue = Math.floor((Date.now() - due.getTime()) / 86400000)
                           return [
-                            <span className="font-medium">{safeStr(r.trailer_name || r.trailer) || "—"}</span>,
+                            <span className="font-medium">{rentalTrailerLabel(r)}</span>,
                             <span className="text-muted-foreground">{safeStr(r.client_name || r.client) || "—"}</span>,
                             <span className="text-muted-foreground">{due.toLocaleDateString("en-KE")}</span>,
                             <span className="font-semibold text-red-600">{daysOverdue}d</span>,
-                            <span>{ksh(Number(r.daily_rate) || 0)}</span>,
                           ]
                         })}
                       />
@@ -957,7 +1292,7 @@ export default function TrailerReportsPage() {
             {/* ─── Finance ─── */}
             {reportModule === "Finance" && (
               <section className="space-y-5">
-                <SubTabBar tabs={["Revenue Register", "Expense Register", "Profit & Loss"] as FinanceSubTab[]} active={financeSubTab} onChange={setFinanceSubTab} />
+                <SubTabBar tabs={["Revenue Register", "Invoice Register", "AR Aging", "Expense Register", "Profit & Loss"] as FinanceSubTab[]} active={financeSubTab} onChange={setFinanceSubTab} />
                 <div className="flex flex-wrap gap-3 items-center p-4 bg-muted/40 rounded-xl border border-border">
                   <select value={range} onChange={(e) => setRange(e.target.value)} className="px-3 py-2 rounded-lg border border-input bg-card text-sm">
                     <option value="all">All Time</option>
@@ -971,8 +1306,21 @@ export default function TrailerReportsPage() {
                       {EXPENSE_CATEGORIES.map((c) => <option key={`cat-${c}`} value={c}>{c}</option>)}
                     </select>
                   )}
+                  {financeSubTab === "Invoice Register" && (
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 rounded-lg border border-input bg-card text-sm">
+                      <option value="All">All Status</option>
+                      <option value="Draft">Draft</option>
+                      <option value="Sent">Sent</option>
+                      <option value="Partially Paid">Partially Paid</option>
+                      <option value="Paid">Paid</option>
+                      <option value="Overdue">Overdue</option>
+                      <option value="Void">Void</option>
+                    </select>
+                  )}
                   <div className="ml-auto flex gap-2">
                     {financeSubTab === "Revenue Register" && <ExportBtn onClick={exportRevenueCSV} label="Export CSV" variant="teal" />}
+                    {financeSubTab === "Invoice Register" && <ExportBtn onClick={exportInvoicesCSV} label="Export CSV" variant="teal" />}
+                    {financeSubTab === "AR Aging" && <ExportBtn onClick={exportAgingCSV} label="Export CSV" variant="teal" />}
                     {financeSubTab === "Expense Register" && <ExportBtn onClick={exportExpensesCSV} label="Export CSV" variant="teal" />}
                     {financeSubTab === "Profit & Loss" && <ExportBtn onClick={exportProfitLossCSV} label="Export CSV" variant="teal" />}
                   </div>
@@ -980,21 +1328,95 @@ export default function TrailerReportsPage() {
 
                 {financeSubTab === "Revenue Register" && (
                   <div className="space-y-5">
+                    <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-xs text-teal-800">
+                      This is <strong>billed</strong> revenue — what rentals charged, regardless of whether it's been paid.
+                      See <strong>Invoice Register</strong> for what's actually been collected.
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard label="Total Revenue" value={ksh(revenueTotal)} valueClass="text-teal-700" />
+                      <StatCard label="Billed Revenue" value={ksh(billedRevenue)} valueClass="text-teal-700" />
                       <StatCard label="Rentals Counted" value={String(rentals.length)} valueClass="text-blue-600" />
-                      <StatCard label="Avg. Revenue / Rental" value={ksh(rentals.length ? revenueTotal / rentals.length : 0)} valueClass="text-purple-600" />
+                      <StatCard label="Avg. Revenue / Rental" value={ksh(rentals.length ? billedRevenue / rentals.length : 0)} valueClass="text-purple-600" />
                     </div>
                     <DataTable
-                      headers={["RENTAL ID", "TRAILER", "CLIENT", "DATE", "AMOUNT", "STATUS"]}
+                      headers={["RENTAL ID", "TRAILER(S)", "CLIENT", "DATE", "AMOUNT", "STATUS"]}
                       emptyMsg="No revenue records found."
                       rows={rentals.slice(0, 25).map((r) => [
                         <span className="font-mono">{safeStr(r.id)}</span>,
-                        <span>{safeStr(r.trailer_name || r.trailer) || "—"}</span>,
+                        <span>{rentalTrailerLabel(r)}</span>,
                         <span className="text-muted-foreground">{safeStr(r.client_name || r.client) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(r.start_date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(Number(r.total_amount ?? r.amount) || 0)}</span>,
+                        <span className="font-semibold">{ksh(Number(r.total_amount ?? r.total ?? r.amount) || 0)}</span>,
                         <StatusBadge status={safeStr(r.status) || "Active"} />,
+                      ])}
+                    />
+                  </div>
+                )}
+
+                {financeSubTab === "Invoice Register" && (
+                  <div className="space-y-5">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-800">
+                      This is <strong>collected / financial</strong> revenue — grounded in actual invoices and payments received.
+                    </div>
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                      <StatCard label="Total Invoiced" value={ksh(invoiceTotals.totalInvoiced)} valueClass="text-blue-600" />
+                      <StatCard label="Total Collected" value={ksh(invoiceTotals.totalCollected)} valueClass="text-teal-700" />
+                      <StatCard label="Outstanding" value={ksh(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
+                      <StatCard label="Overdue" value={ksh(invoiceTotals.overdueAmount)} sub={`${invoiceTotals.overdueCount} invoices`} valueClass="text-red-600" />
+                    </div>
+                    <DataTable
+                      headers={["INVOICE #", "CLIENT", "DATE", "DUE", "TOTAL", "PAID", "BALANCE", "STATUS"]}
+                      emptyMsg="No invoices match the current filters."
+                      rows={filteredInvoices.slice(0, 30).map((inv) => {
+                        const total = Number(inv.total_amount ?? inv.total ?? inv.amount) || 0
+                        const balance = invoiceBalance(inv)
+                        return [
+                          <span className="font-mono">{safeStr(inv.invoice_number || inv.number || inv.id)}</span>,
+                          <span className="font-medium">{safeStr(inv.client_name || inv.client) || "—"}</span>,
+                          <span className="text-muted-foreground">{safeStr(inv.date || inv.issue_date) || "—"}</span>,
+                          <span className={isInvoiceOverdue(inv) ? "text-red-600 font-semibold" : "text-muted-foreground"}>{safeStr(inv.due_date) || "—"}</span>,
+                          <span>{ksh(total)}</span>,
+                          <span className="text-teal-700">{ksh(total - balance)}</span>,
+                          <span className={balance > 0 ? "font-semibold" : "text-muted-foreground"}>{ksh(balance)}</span>,
+                          <StatusBadge status={isInvoiceOverdue(inv) ? "Overdue" : invoiceStatus(inv)} />,
+                        ]
+                      })}
+                    />
+                  </div>
+                )}
+
+                {financeSubTab === "AR Aging" && (
+                  <div className="space-y-5">
+                    <SectionHeader title="Accounts Receivable Aging" sub="Outstanding invoice balances bucketed by days overdue" />
+                    <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+                      {agingChartData.map((b, i) => (
+                        <StatCard key={b.bucket} label={b.bucket === "Current" ? "Current" : `${b.bucket} days`} value={ksh(b.amount)}
+                          valueClass={i === 0 ? "text-teal-700" : i < 3 ? "text-amber-600" : "text-red-600"} />
+                      ))}
+                    </div>
+                    <Card className="bg-card border-border rounded-xl">
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Outstanding Balance by Age</CardTitle></CardHeader>
+                      <CardContent>
+                        {invoiceTotals.totalOutstanding === 0 ? <EmptyState message="No outstanding invoice balances — receivables are clean." /> : (
+                          <ResponsiveContainer width="100%" height={260}>
+                            <BarChart data={agingChartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                              <Tooltip formatter={fmtKsh} />
+                              <Bar dataKey="amount" radius={[4,4,0,0]} name="Outstanding">
+                                {agingChartData.map((_, i) => <Cell key={String(i)} fill={AGING_BUCKET_COLORS[i]} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <DataTable
+                      headers={["AGING BUCKET", "OUTSTANDING AMOUNT", "% OF TOTAL AR"]}
+                      rows={agingChartData.map((b) => [
+                        <span className="font-medium">{b.bucket === "Current" ? "Current" : `${b.bucket} days overdue`}</span>,
+                        <span className="font-semibold">{ksh(b.amount)}</span>,
+                        <span>{invoiceTotals.totalOutstanding ? Math.round((b.amount / invoiceTotals.totalOutstanding) * 100) : 0}%</span>,
                       ])}
                     />
                   </div>
@@ -1023,21 +1445,47 @@ export default function TrailerReportsPage() {
 
                 {financeSubTab === "Profit & Loss" && (
                   <div className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard label="Total Revenue" value={ksh(revenueTotal)} valueClass="text-teal-700" />
-                      <StatCard label="Total Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
-                      <StatCard label="Net Profit / Loss" value={ksh(profitLoss)} valueClass={profitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <Card className="bg-card border-border rounded-xl border-t-4 border-t-teal-500">
+                        <CardHeader className="pb-1"><CardTitle className="text-sm font-semibold">Billed Basis (Rentals)</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Revenue</span><span className="font-semibold">{ksh(billedRevenue)}</span></div>
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{ksh(expenseTotal)}</span></div>
+                          <div className="flex justify-between text-base pt-2 border-t border-border">
+                            <span className="font-semibold">Net Profit / Loss</span>
+                            <span className={`font-bold ${billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{ksh(billedProfitLoss)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-card border-border rounded-xl border-t-4 border-t-blue-500">
+                        <CardHeader className="pb-1"><CardTitle className="text-sm font-semibold">Collected Basis (Invoices / Cash)</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Revenue</span><span className="font-semibold">{ksh(invoiceTotals.totalCollected)}</span></div>
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{ksh(expenseTotal)}</span></div>
+                          <div className="flex justify-between text-base pt-2 border-t border-border">
+                            <span className="font-semibold">Net Profit / Loss</span>
+                            <span className={`font-bold ${collectedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{ksh(collectedProfitLoss)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      The gap between the two ({ksh(Math.abs(billedRevenue - invoiceTotals.totalCollected))}) is roughly your outstanding receivables — see AR Aging for the breakdown.
+                    </p>
                     <Card className="bg-card border-border rounded-xl">
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Revenue vs Expenses</CardTitle></CardHeader>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Billed vs Collected vs Expenses</CardTitle></CardHeader>
                       <CardContent>
                         {revenueTrendData.length === 0 ? <EmptyState message="No financial trend data." /> : (
                           <ResponsiveContainer width="100%" height={260}>
                             <AreaChart data={revenueTrendData}>
                               <defs>
-                                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id="billedGrad" x1="0" y1="0" x2="0" y2="1">
                                   <stop offset="5%" stopColor="#0F6E56" stopOpacity={0.2} />
                                   <stop offset="95%" stopColor="#0F6E56" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="collectedGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
+                                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
                                   <stop offset="5%" stopColor="#EF4444" stopOpacity={0.15} />
@@ -1049,7 +1497,8 @@ export default function TrailerReportsPage() {
                               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                               <Tooltip formatter={fmtKsh} />
                               <Legend wrapperStyle={{ fontSize: 11 }} />
-                              <Area type="monotone" dataKey="revenue" stroke="#0F6E56" fill="url(#revGrad)" strokeWidth={2} name="Revenue" />
+                              <Area type="monotone" dataKey="billed" stroke="#0F6E56" fill="url(#billedGrad)" strokeWidth={2} name="Billed (Rentals)" />
+                              <Area type="monotone" dataKey="collected" stroke="#3B82F6" fill="url(#collectedGrad)" strokeWidth={2} name="Collected (Invoices)" />
                               <Area type="monotone" dataKey="expenses" stroke="#EF4444" fill="url(#expGrad)" strokeWidth={2} name="Expenses" strokeDasharray="4 4" />
                             </AreaChart>
                           </ResponsiveContainer>
@@ -1090,14 +1539,21 @@ export default function TrailerReportsPage() {
             {/* ─── Tax Summary ─── */}
             {reportModule === "Tax Summary" && (
               <section className="space-y-5">
-                <SectionHeader title="Tax Summary" sub="Gross revenue, deductible expenses, and taxable profit"
+                <SectionHeader title="Tax Summary" sub="Gross revenue, deductible expenses, and taxable profit — both bases"
                   actions={<ExportBtn onClick={exportTaxSummaryCSV} label="Export CSV" variant="teal" />} />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <StatCard label="Gross Revenue" value={ksh(revenueTotal)} valueClass="text-teal-700" />
-                  <StatCard label="Deductible Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
-                  <StatCard label="Taxable Profit" value={ksh(profitLoss)} valueClass={profitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <StatCard label="Gross Revenue (Billed)" value={ksh(billedRevenue)} valueClass="text-teal-700" />
+                    <StatCard label="Deductible Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
+                    <StatCard label="Taxable Profit (Billed)" value={ksh(billedProfitLoss)} valueClass={billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <StatCard label="Gross Revenue (Collected)" value={ksh(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
+                    <StatCard label="Deductible Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
+                    <StatCard label="Taxable Profit (Cash basis)" value={ksh(collectedProfitLoss)} valueClass={collectedProfitLoss >= 0 ? "text-blue-600" : "text-red-600"} />
+                  </div>
                 </div>
-                <EmptyState message="Detailed tax filing breakdowns will appear here once statutory categories are configured." />
+                <EmptyState message="Detailed tax filing breakdowns (VAT, withholding, etc.) will appear here once statutory categories are configured — confirm with your accountant which basis (billed/accrual vs collected/cash) applies for KRA filing." />
               </section>
             )}
           </>
@@ -1106,6 +1562,81 @@ export default function TrailerReportsPage() {
         {/* ══════════════ ANALYTICS ══════════════ */}
         {mainTab === "Analytics" && (
           <>
+            {/* ─── Quotations Analytics ─── */}
+            {analyticsModule === "Quotations" && (
+              <section className="space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-muted/40 rounded-xl border border-border">
+                  <PeriodBar periods={["This Month", "Last 3M", "Last 6M", "All Time"]} active={analyticsPeriod} onChange={setAnalyticsPeriod} />
+                  <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 border border-input rounded-lg text-sm font-medium hover:bg-accent">
+                    <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                  </button>
+                </div>
+                <SubTabBar tabs={["Overview", "Conversion Funnel"] as QuotationsAnalyticsSubTab[]} active={quotationsAnalyticsSubTab} onChange={setQuotationsAnalyticsSubTab} />
+
+                {quotationsAnalyticsSubTab === "Overview" && (
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                      <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
+                      <StatCard label="Pending Value" value={ksh(quotationTotals.pendingValue)} valueClass="text-amber-600" icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
+                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
+                    </div>
+                    <Card className="bg-card border-border rounded-xl">
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Quotation Status Breakdown</CardTitle></CardHeader>
+                      <CardContent>
+                        {quotations.length === 0 ? <EmptyState message="No quotation data." /> : (
+                          <ResponsiveContainer width="100%" height={240}>
+                            <PieChart>
+                              <Pie
+                                data={Object.entries(quotations.reduce((m: Record<string, number>, q) => {
+                                  const s = quotationStatus(q); m[s] = (m[s] || 0) + 1; return m
+                                }, {})).map(([name, value]) => ({ name, value }))}
+                                dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
+                                label={pieLabel} labelLine={false}>
+                                {CHART_COLORS.map((c, i) => <Cell key={String(i)} fill={c} />)}
+                              </Pie>
+                              <Tooltip /><Legend wrapperStyle={{ fontSize: 12 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {quotationsAnalyticsSubTab === "Conversion Funnel" && (
+                  <div className="space-y-5">
+                    <Card className="bg-card border-border rounded-xl">
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Quotation → Rental Funnel</CardTitle></CardHeader>
+                      <CardContent>
+                        {quotations.length === 0 ? <EmptyState message="No quotation data." /> : (
+                          <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={quotationFunnelData} layout="vertical" margin={{ left: 40 }}>
+                              <CartesianGrid horizontal={false} strokeOpacity={0.3} />
+                              <XAxis type="number" tick={{ fontSize: 11 }} />
+                              <YAxis dataKey="stage" type="category" tick={{ fontSize: 11 }} width={140} />
+                              <Tooltip formatter={fmtCount} />
+                              <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={22}>
+                                {quotationFunnelData.map((_, i) => <Cell key={String(i)} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <DataTable
+                      headers={["STAGE", "COUNT", "% OF TOTAL"]}
+                      rows={quotationFunnelData.map((f) => [
+                        <span className="font-medium">{f.stage}</span>,
+                        <span className="font-semibold text-teal-700">{f.count}</span>,
+                        <span>{quotations.length ? Math.round((f.count / quotations.length) * 100) : 0}%</span>,
+                      ])}
+                    />
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* ─── Utilization Analytics ─── */}
             {analyticsModule === "Utilization" && (
               <section className="space-y-5">
@@ -1267,23 +1798,60 @@ export default function TrailerReportsPage() {
 
                 {financeAnalyticsSubTab === "Overview" && (
                   <div className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard label="Total Revenue" value={ksh(revenueTotal)} valueClass="text-teal-700" />
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                      <StatCard label="Billed Revenue" value={ksh(billedRevenue)} valueClass="text-teal-700" />
+                      <StatCard label="Collected Revenue" value={ksh(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
                       <StatCard label="Total Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
-                      <StatCard label="Net Profit" value={ksh(profitLoss)} valueClass={profitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
+                      <StatCard label="Outstanding AR" value={ksh(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <Card className="bg-card border-border rounded-xl">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Spend by Category</CardTitle></CardHeader>
+                        <CardContent>
+                          {categoryChartData.length === 0 ? <EmptyState message="No expense data." /> : (
+                            <ResponsiveContainer width="100%" height={240}>
+                              <BarChart data={categoryChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                <Tooltip formatter={fmtKsh} />
+                                <Bar dataKey="value" radius={[4,4,0,0]} name="Amount">
+                                  {categoryChartData.map((_, i) => <Cell key={String(i)} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )}
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-card border-border rounded-xl">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Invoice Status Mix</CardTitle></CardHeader>
+                        <CardContent>
+                          {invoiceStatusBreakdown.length === 0 ? <EmptyState message="No invoice data." /> : (
+                            <ResponsiveContainer width="100%" height={240}>
+                              <PieChart>
+                                <Pie data={invoiceStatusBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
+                                  label={pieLabel} labelLine={false}>
+                                  {invoiceStatusBreakdown.map((_, i) => <Cell key={String(i)} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip /><Legend wrapperStyle={{ fontSize: 12 }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
                     <Card className="bg-card border-border rounded-xl">
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Spend by Category</CardTitle></CardHeader>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">AR Aging Summary</CardTitle></CardHeader>
                       <CardContent>
-                        {categoryChartData.length === 0 ? <EmptyState message="No expense data." /> : (
-                          <ResponsiveContainer width="100%" height={240}>
-                            <BarChart data={categoryChartData}>
+                        {invoiceTotals.totalOutstanding === 0 ? <EmptyState message="No outstanding invoice balances." /> : (
+                          <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={agingChartData}>
                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                              <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
                               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                               <Tooltip formatter={fmtKsh} />
-                              <Bar dataKey="value" radius={[4,4,0,0]} name="Amount">
-                                {categoryChartData.map((_, i) => <Cell key={String(i)} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                              <Bar dataKey="amount" radius={[4,4,0,0]} name="Outstanding">
+                                {agingChartData.map((_, i) => <Cell key={String(i)} fill={AGING_BUCKET_COLORS[i]} />)}
                               </Bar>
                             </BarChart>
                           </ResponsiveContainer>
@@ -1294,7 +1862,7 @@ export default function TrailerReportsPage() {
                 )}
                 {financeAnalyticsSubTab === "Trends" && (
                   <Card className="bg-card border-border rounded-xl">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Revenue vs Expenses Over Time</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Billed vs Collected vs Expenses Over Time</CardTitle></CardHeader>
                     <CardContent>
                       {revenueTrendData.length === 0 ? <EmptyState message="No financial trend data." /> : (
                         <ResponsiveContainer width="100%" height={280}>
@@ -1304,7 +1872,8 @@ export default function TrailerReportsPage() {
                             <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                             <Tooltip formatter={fmtKsh} />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Bar dataKey="revenue" fill="#0F6E56" name="Revenue" radius={[4,4,0,0]} />
+                            <Bar dataKey="billed" fill="#0F6E56" name="Billed (Rentals)" radius={[4,4,0,0]} />
+                            <Bar dataKey="collected" fill="#3B82F6" name="Collected (Invoices)" radius={[4,4,0,0]} />
                             <Bar dataKey="expenses" fill="#EF4444" name="Expenses" radius={[4,4,0,0]} />
                           </BarChart>
                         </ResponsiveContainer>

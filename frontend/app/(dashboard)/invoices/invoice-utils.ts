@@ -71,7 +71,10 @@ export function canSend(status: InvoiceStatus): boolean {
   return status === "Draft"
 }
 export function canRecordPayment(invoice: Invoice): boolean {
-  return invoice.status !== "Void" && invoice.status !== "Draft" && invoice.balance > 0
+  return invoice.status !== "Void" && invoice.balance > 0
+}
+export function canRefund(invoice: Invoice): boolean {
+  return invoice.status === "Paid" && invoice.amountPaid > 0
 }
 export function canVoid(status: InvoiceStatus): boolean {
   return status !== "Void" && status !== "Paid"

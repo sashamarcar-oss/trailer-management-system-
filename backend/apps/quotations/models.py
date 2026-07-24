@@ -4,11 +4,14 @@ from django.db import models
 class Quotation(models.Model):
     STATUS_CHOICES = [
         ("draft", "Draft"), ("pending", "Pending"), ("accepted", "Accepted"),
-        ("rejected", "Rejected"), ("expired", "Expired"),
+        ("converted", "Converted"), ("rejected", "Rejected"), ("expired", "Expired"),
     ]
 
     quotation_number = models.CharField(max_length=20, unique=True, editable=False)
-    client = models.ForeignKey("clients.Client", on_delete=models.PROTECT, related_name="quotations")
+    client = models.ForeignKey("clients.Client", null=True, blank=True, on_delete=models.SET_NULL, related_name="quotations")
+    client_name = models.CharField(max_length=200, blank=True)
+    client_email = models.EmailField(blank=True)
+    client_phone = models.CharField(max_length=30, blank=True)
     issue_date = models.DateField(auto_now_add=True)
     expiry_date = models.DateField()
 
@@ -43,7 +46,8 @@ class Quotation(models.Model):
 
 class QuotationItem(models.Model):
     quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="items")
-    trailer = models.ForeignKey("trailers.Trailer", on_delete=models.PROTECT, related_name="quotation_items")
+    trailer = models.ForeignKey("trailers.Trailer", null=True, blank=True, on_delete=models.SET_NULL, related_name="quotation_items")
+    description = models.CharField(max_length=255, blank=True)
     duration_days = models.PositiveIntegerField(default=1)
     rate_per_day = models.DecimalField(max_digits=12, decimal_places=2)
 

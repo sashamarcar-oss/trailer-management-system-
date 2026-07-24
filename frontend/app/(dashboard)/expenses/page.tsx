@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ModuleHeader } from "@/components/ui/ModuleHeader";
 import { Table, Column } from "@/components/ui/Table";
@@ -13,13 +14,16 @@ import { api } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
 import { expenseStatuses } from "@/lib/validations/expense";
 import { Expense, Paginated } from "@/types";
+import { DetailsDialog } from "@/components/ui/DetailsDialog";
 
 export default function ExpensesPage() {
   const [rows, setRows] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Expense | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -80,6 +84,17 @@ export default function ExpensesPage() {
         </Select>
       ) : <Badge status={r.status} />,
     },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (r) => (
+        <div className="flex items-center gap-1">
+          <button onClick={() => setViewing(r)} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-teal-700 hover:bg-teal-50"><Eye className="h-3.5 w-3.5" /> View</button>
+          <button onClick={() => { setEditing(r); setFormOpen(true); }} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-blue-700 hover:bg-blue-50"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+          <button onClick={async () => { if (!window.confirm(`Delete expense ${r.id}?`)) return; try { await api.expenses.remove(r.id); setRows((prev) => prev.filter((expense) => expense.id !== r.id)); toast.success("Expense deleted"); } catch (error: any) { toast.error(error?.response?.data?.detail || "Could not delete the expense."); } }} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -88,14 +103,27 @@ export default function ExpensesPage() {
         title="Expense management"
         subtitle={`KES ${total.toLocaleString()} recorded`}
         actionLabel="Record expense"
-        onAction={() => setFormOpen(true)}
+        onAction={() => { setEditing(null); setFormOpen(true); }}
       />
       <Table columns={columns} rows={rows} loading={loading} getRowKey={(r) => r.id} />
 
       <ExpenseForm
         open={formOpen}
         onOpenChange={setFormOpen}
-        onCreated={(expense) => setRows((prev) => [expense, ...prev])}
+        editing={editing}
+        onSaved={(expense, isEdit) => setRows((prev) => isEdit ? prev.map((row) => row.id === expense.id ? expense : row) : [expense, ...prev])}
+      />
+      <DetailsDialog
+        open={Boolean(viewing)}
+        onOpenChange={(open) => !open && setViewing(null)}
+        title={viewing ? `Expense ${viewing.id}` : "Expense details"}
+        description={viewing?.category}
+        fields={viewing ? [
+          { label: "Date", value: viewing.date }, { label: "Status", value: viewing.status },
+          { label: "Amount", value: `KES ${Number(viewing.amount).toLocaleString()}` }, { label: "Trailer", value: viewing.trailer },
+          { label: "Vendor", value: viewing.vendor }, { label: "Payment method", value: viewing.paymentMethod },
+          { label: "Notes", value: viewing.notes },
+        ] : []}
       />
     </div>
   );

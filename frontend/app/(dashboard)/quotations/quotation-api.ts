@@ -14,9 +14,11 @@ type BackendQuotation = {
   discount?: number | string
   terms?: string
   notes?: string
+  converted_rental_id?: number | string | null
   items?: Array<{
     id: number | string
-    trailer?: number | string
+      trailer?: number | string
+      description?: string
     duration_days: number
     rate_per_day: number | string
     subtotal?: number | string
@@ -44,7 +46,7 @@ function mapQuotation(item: BackendQuotation): Quotation {
     return {
       id: String(lineItem.id),
       trailerId: lineItem.trailer == null ? null : String(lineItem.trailer),
-      description: lineItem.trailer == null ? "Trailer rental" : `Trailer ${lineItem.trailer}`,
+      description: lineItem.description || (lineItem.trailer == null ? "Trailer rental" : `Trailer ${lineItem.trailer}`),
       quantity,
       rate,
       rateUnit: "day" as const,
@@ -74,7 +76,7 @@ function mapQuotation(item: BackendQuotation): Quotation {
     value: total,
     notes: item.notes,
     terms: item.terms,
-    convertedRentalId: null,
+    convertedRentalId: item.converted_rental_id == null ? null : String(item.converted_rental_id),
     createdAt: "",
     updatedAt: "",
   }
@@ -82,7 +84,10 @@ function mapQuotation(item: BackendQuotation): Quotation {
 
 function toBackendPayload(payload: QuotationPayload) {
   return {
-    client: payload.clientId,
+    client: payload.clientId || null,
+    client_name: payload.clientName,
+    client_email: payload.clientEmail || "",
+    client_phone: payload.clientPhone || "",
     expiry_date: payload.expiryDate,
     notes: payload.notes || "",
     terms: payload.terms || "",
@@ -91,6 +96,7 @@ function toBackendPayload(payload: QuotationPayload) {
     status: "draft",
     items: payload.lineItems.map((lineItem) => ({
       trailer: lineItem.trailerId,
+      description: lineItem.description,
       duration_days: lineItem.rateUnit === "week" ? lineItem.quantity * 7 : lineItem.rateUnit === "month" ? lineItem.quantity * 30 : lineItem.quantity,
       rate_per_day: lineItem.rate,
     })),

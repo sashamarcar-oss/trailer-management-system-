@@ -8,6 +8,18 @@ import { kes } from "./invoice-utils"
 
 const METHODS: PaymentMethod[] = ["M-Pesa", "Bank Transfer", "Cash", "Cheque", "Other"]
 
+function apiErrorMessage(error: unknown) {
+  const data = error && typeof error === "object" && "response" in error
+    ? (error as { response?: { data?: unknown } }).response?.data : undefined
+  if (typeof data === "string") return data
+  if (data && typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>).map(([field, value]) =>
+      `${field}: ${Array.isArray(value) ? value.join(", ") : String(value)}`
+    ).join("; ")
+  }
+  return error instanceof Error ? error.message : "Couldn't record this payment."
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -16,10 +28,12 @@ export function RecordPaymentDialog({
   invoice,
   onClose,
   onRecorded,
+  mode = "payment",
 }: {
   invoice: Invoice | null // null = closed
   onClose: () => void
   onRecorded: () => Promise<void> | void
+  mode?: "payment" | "refund"
 }) {
   const [amount, setAmount] = useState(0)
   const [method, setMethod] = useState<PaymentMethod>("M-Pesa")
@@ -31,7 +45,7 @@ export function RecordPaymentDialog({
 
   useEffect(() => {
     if (invoice) {
-      setAmount(invoice.balance)
+      setAmount(mode === "refund" ? invoice.amountPaid : invoice.balance)
       setMethod("M-Pesa")
       setReference("")
       setPaidAt(todayISO())
@@ -42,13 +56,16 @@ export function RecordPaymentDialog({
 
   if (!invoice) return null
 
+  const isRefund = mode === "refund"
+  const amountLimit = isRefund ? invoice.amountPaid : invoice.balance
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
 
     if (amount <= 0) { setError("Payment amount must be greater than zero."); return }
-    if (invoice && amount > invoice.balance + 0.01) {
-      setError(`That's more than the outstanding balance of ${kes(invoice.balance)}. Enter the exact amount received.`)
+    if (invoice && amount > amountLimit + 0.01) {
+      setError(isRefund ? `That's more than the paid amount of ${kes(invoice.amountPaid)}.` : `That's more than the outstanding balance of ${kes(invoice.balance)}. Enter the exact amount received.`)
       return
     }
 
@@ -56,11 +73,11 @@ export function RecordPaymentDialog({
 
     setSaving(true)
     try {
-      await paymentApi.record(invoice!.id, payload)
+      await paymentApi.record(invoice!.id, payload, isRefund ? "refund" : "partial")
       await onRecorded()
       onClose()
-    } catch {
-      setError("Couldn't record this payment. Please check the details and try again.")
+    } catch (error) {
+      setError(apiErrorMessage(error))
     } finally {
       setSaving(false)
     }
@@ -71,7 +88,7 @@ export function RecordPaymentDialog({
       <div className="w-full max-w-md rounded-xl bg-card border border-border shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Record Payment</h2>
+            <h2 className="text-lg font-semibold text-foreground">{isRefund ? "Refund payment" : "Record Payment"}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">{invoice.invoiceNumber} · {invoice.clientName}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
@@ -83,12 +100,12 @@ export function RecordPaymentDialog({
           {error && <div className="px-4 py-2.5 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">{error}</div>}
 
           <div className="flex justify-between text-sm rounded-lg bg-muted/40 border border-border px-4 py-3">
-            <span className="text-muted-foreground">Outstanding balance</span>
-            <span className="font-bold text-teal-700">{kes(invoice.balance)}</span>
+            <span className="text-muted-foreground">{isRefund ? "Amount paid" : "Outstanding balance"}</span>
+            <span className="font-bold text-teal-700">{kes(amountLimit)}</span>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Amount received *</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{isRefund ? "Amount to refund" : "Amount received"} *</label>
             <input
               type="number" min={0} step="0.01" value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
@@ -97,10 +114,10 @@ export function RecordPaymentDialog({
             />
             <button
               type="button"
-              onClick={() => setAmount(invoice.balance)}
+              onClick={() => setAmount(amountLimit)}
               className="text-xs text-teal-700 font-semibold mt-1 hover:text-teal-800"
             >
-              Pay full balance
+              {isRefund ? "Refund full amount" : "Pay full balance"}
             </button>
           </div>
 
@@ -134,7 +151,7 @@ export function RecordPaymentDialog({
               className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
           </div>
 
-          {amount > 0 && amount < invoice.balance && (
+          {!isRefund && amount > 0 && amount < invoice.balance && (
             <p className="text-xs text-amber-600">
               This is a partial payment. Remaining balance after this: {kes(invoice.balance - amount)}.
             </p>
@@ -147,7 +164,7 @@ export function RecordPaymentDialog({
             </button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-60">
-              {saving ? "Recording…" : "Record Payment"}
+              {saving ? "Saving…" : isRefund ? "Refund payment" : "Record Payment"}
             </button>
           </div>
         </form>

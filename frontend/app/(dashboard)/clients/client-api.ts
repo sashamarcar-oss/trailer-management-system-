@@ -52,6 +52,8 @@ function mapClient(item: BackendClient): Client {
     status: item.blacklisted ? "Inactive" : "Active",
     credit_limit: numberValue(item.credit_limit), outstanding_balance: numberValue(item.outstanding_balance), overdue_balance: 0,
     payment_terms_days: terms === "cash" ? 0 : Number(terms || 30), rating: numberValue(item.rating), notes: item.notes,
+    kra_pin: item.kra_pin, business_registration: item.business_registration,
+    national_id: item.national_id, passport: item.passport,
     createdAt: item.created_at || "", updatedAt: item.updated_at || "",
   }
 }
@@ -89,7 +91,7 @@ export const clientApi = {
   async getStatement(id: string): Promise<StatementLine[]> {
     const [invoiceResponse, paymentResponse] = await Promise.all([
       axiosClient.get<{ results: BackendInvoice[] }>("/invoices/", { params: { client: id } }),
-      axiosClient.get<{ results: BackendPayment[] }>("/payments/", { params: { client: id } }),
+      axiosClient.get<{ results: BackendPayment[] }>("/invoices/payments/", { params: { client: id } }),
     ])
     const entries = [
       ...invoiceResponse.data.results.map((invoice) => ({ date: invoice.invoice_date, type: "Invoice" as const, reference: invoice.invoice_number, debit: numberValue(invoice.total), credit: 0 })),

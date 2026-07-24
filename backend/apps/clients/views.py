@@ -1,4 +1,6 @@
+from django.db.models.deletion import ProtectedError
 from rest_framework import viewsets, permissions
+from rest_framework.exceptions import ValidationError
 from .models import Client, ClientDocument, ClientNote
 from .serializers import ClientSerializer, ClientDocumentSerializer, ClientNoteSerializer
 from .filters import ClientFilter
@@ -14,6 +16,12 @@ class ClientViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise ValidationError({"client": "This client cannot be deleted because it is linked to rental records."})
 
 
 class ClientDocumentViewSet(viewsets.ModelViewSet):

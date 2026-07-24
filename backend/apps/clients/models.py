@@ -17,8 +17,8 @@ class Client(models.Model):
     email = models.EmailField()
 
     pin = models.CharField("Postal / location PIN", max_length=20, blank=True)
-    address = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
+    address = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, default="Kenya")
 
     kra_pin = models.CharField(max_length=30, blank=True)

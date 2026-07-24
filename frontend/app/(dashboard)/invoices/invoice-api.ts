@@ -49,14 +49,16 @@ function mapInvoice(item: BackendInvoice): Invoice {
   const vatAmount = numberValue(item.tax) + numberValue(item.vat)
   const total = numberValue(item.total) || subtotal - discountAmount + vatAmount
   const amountPaid = numberValue(item.amount_paid)
+  const balance = numberValue(item.balance) || total - amountPaid
+  const status = total > 0 && balance <= 0 && item.status !== "cancelled" ? "Paid" : normalizeStatus(item.status)
 
   return {
     id: String(item.id), invoiceNumber: item.invoice_number, clientId: String(item.client),
     clientName: item.client_name || `Client ${item.client}`, date: item.invoice_date, dueDate: item.due_date,
-    status: normalizeStatus(item.status), lineItems, subtotal,
+    status, lineItems, subtotal,
     discountPercent: subtotal ? (discountAmount / subtotal) * 100 : 0, discountAmount,
     vatPercent: subtotal - discountAmount ? (vatAmount / (subtotal - discountAmount)) * 100 : 0, vatAmount,
-    total, amountPaid, balance: numberValue(item.balance) || total - amountPaid,
+    total, amountPaid, balance,
     payments: (item.payments || []) as unknown as Payment[], notes: item.notes, terms: item.terms,
     createdAt: item.created_at || "", updatedAt: item.created_at || "",
   }
@@ -64,8 +66,9 @@ function mapInvoice(item: BackendInvoice): Invoice {
 
 function toBackendPayload(payload: InvoicePayload) {
   return {
-    client: payload.clientId, due_date: payload.dueDate, discount: 0, tax: 0, vat: 0, status: "draft",
-    items: payload.lineItems.map((lineItem) => ({ trailer: lineItem.trailerId, description: lineItem.description, quantity: lineItem.quantity, unit_price: lineItem.rate })),
+    client: payload.clientId || null, client_name: payload.clientName, client_email: payload.clientEmail || "", client_phone: payload.clientPhone || "",
+    due_date: payload.dueDate, discount: 0, tax: 0, vat: 0, status: "draft", notes: payload.notes || "", terms: payload.terms || "",
+    items: payload.lineItems.map((lineItem) => ({ trailer: lineItem.trailerId || null, description: lineItem.description, quantity: lineItem.quantity, unit_price: lineItem.rate })),
   }
 }
 
@@ -104,8 +107,14 @@ export const invoiceApi = {
 }
 
 export const paymentApi = {
-  async record(invoiceId: string, payload: PaymentPayload): Promise<{ invoice: Invoice; payment: Payment }> {
-    const { data } = await axiosClient.post<Record<string, unknown>>("/payments/", { invoice: invoiceId, amount: payload.amount, method: payload.method.toLowerCase().replace("-", "_"), reference_number: payload.reference || "" })
+  async record(invoiceId: string, payload: PaymentPayload, paymentType: "partial" | "refund" = "partial"): Promise<{ invoice: Invoice; payment: Payment }> {
+    const methodMap: Record<PaymentPayload["method"], string> = {
+      "M-Pesa": "mobile_money", "Bank Transfer": "bank", Cash: "cash", Cheque: "cheque", Other: "card",
+    }
+    const { data } = await axiosClient.post<Record<string, unknown>>("/invoices/payments/", {
+      invoice: invoiceId, amount: payload.amount, method: methodMap[payload.method], payment_type: paymentType,
+      reference_number: payload.reference || "",
+    })
     return { invoice: await invoiceApi.retrieve(invoiceId), payment: data as unknown as Payment }
   },
 }

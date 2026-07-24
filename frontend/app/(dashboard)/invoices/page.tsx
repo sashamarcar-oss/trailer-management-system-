@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
 import {
   AlertCircle, Copy, Download, Eye, FileText, MoreVertical,
   Pencil, Plus, Search, Send, Trash2, Ban, Wallet, Bell,
@@ -12,11 +11,12 @@ import { Badge } from "@/components/ui/badge"
 import type { Invoice, InvoicePayload, InvoiceStatus, Paginated } from "./types-and-api-notes"
 import { invoiceApi } from "./invoice-api"
 import {
-  INVOICE_STATUSES, canDelete, canEdit, canRecordPayment, canRemind, canSend, canVoid,
+  INVOICE_STATUSES, canDelete, canEdit, canRecordPayment, canRefund, canRemind, canSend, canVoid,
   computeAgingSummary, daysOverdue, exportInvoicePDF, exportInvoicesCSV, isOverdue, kes,
 } from "./invoice-utils"
 import { InvoiceFormDialog } from "./InvoiceFormDialog"
 import { RecordPaymentDialog } from "./RecordPaymentDialog"
+import { DetailsDialog } from "@/components/ui/DetailsDialog"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -29,6 +29,7 @@ function StatCard({ label, value, valueClass = "text-teal-700" }: { label: strin
 
 function ActionsMenu({ invoice, onAction }: { invoice: Invoice; onAction: (action: string) => void }) {
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ bottom: number; right: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,6 +47,7 @@ function ActionsMenu({ invoice, onAction }: { invoice: Invoice; onAction: (actio
     { key: "pdf", label: "Download PDF", icon: <Download className="w-3.5 h-3.5" /> },
     ...(canSend(invoice.status) ? [{ key: "send", label: "Send to client", icon: <Send className="w-3.5 h-3.5" /> }] : []),
     ...(canRecordPayment(invoice) ? [{ key: "payment", label: "Record payment", icon: <Wallet className="w-3.5 h-3.5" /> }] : []),
+    ...(canRefund(invoice) ? [{ key: "refund", label: "Refund", icon: <Wallet className="w-3.5 h-3.5" /> }] : []),
     ...(canRemind(invoice) ? [{ key: "remind", label: "Send reminder", icon: <Bell className="w-3.5 h-3.5" /> }] : []),
     ...(canVoid(invoice.status) ? [{ key: "void", label: "Void invoice", icon: <Ban className="w-3.5 h-3.5" />, danger: true }] : []),
     ...(canDelete(invoice.status) ? [{ key: "delete", label: "Delete", icon: <Trash2 className="w-3.5 h-3.5" />, danger: true }] : []),
@@ -53,11 +55,11 @@ function ActionsMenu({ invoice, onAction }: { invoice: Invoice; onAction: (actio
 
   return (
     <div ref={ref} className="relative inline-block text-left">
-      <button onClick={() => setOpen((o) => !o)} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
+      <button onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }); setOpen((o) => !o) }} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
         <MoreVertical className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-border bg-card shadow-lg py-1">
+        <div className="fixed z-50 w-44 rounded-lg border border-border bg-card shadow-lg py-1" style={menuPosition || undefined}>
           {items.map((item) => (
             <button key={item.key} onClick={() => { setOpen(false); onAction(item.key) }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-muted ${item.danger ? "text-red-600" : "text-foreground"}`}>
@@ -71,8 +73,6 @@ function ActionsMenu({ invoice, onAction }: { invoice: Invoice; onAction: (actio
 }
 
 export default function InvoicesPage() {
-  const router = useRouter()
-
   const [rows, setRows] = useState<Invoice[]>([])
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
@@ -89,7 +89,9 @@ export default function InvoicesPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Invoice | null>(null)
+  const [viewing, setViewing] = useState<Invoice | null>(null)
   const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null)
+  const [refundingInvoice, setRefundingInvoice] = useState<Invoice | null>(null)
   const [actionError, setActionError] = useState("")
 
   const load = useCallback(async () => {
@@ -128,10 +130,11 @@ export default function InvoicesPage() {
     setActionError("")
     try {
       switch (action) {
-        case "view": router.push(`/invoices/${invoice.id}`); return
+        case "view": setViewing(invoice); return
         case "edit": setEditing(invoice); setDialogOpen(true); return
         case "pdf": exportInvoicePDF(invoice); return
         case "payment": setPayingInvoice(invoice); return
+        case "refund": setRefundingInvoice(invoice); return
         case "duplicate": await invoiceApi.create({
           clientId: invoice.clientId, clientName: invoice.clientName, clientEmail: invoice.clientEmail,
           clientPhone: invoice.clientPhone, date: new Date().toISOString().slice(0, 10), dueDate: invoice.dueDate,
@@ -292,6 +295,8 @@ export default function InvoicesPage() {
 
       <InvoiceFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
       <RecordPaymentDialog invoice={payingInvoice} onClose={() => setPayingInvoice(null)} onRecorded={load} />
+      <RecordPaymentDialog invoice={refundingInvoice} mode="refund" onClose={() => setRefundingInvoice(null)} onRecorded={load} />
+      <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.invoiceNumber || "Invoice details"} description={viewing?.clientName} fields={viewing ? [{ label: "Status", value: viewing.status }, { label: "Invoice date", value: viewing.date }, { label: "Due date", value: viewing.dueDate }, { label: "Total", value: kes(viewing.total) }, { label: "Paid", value: kes(viewing.amountPaid) }, { label: "Balance", value: kes(viewing.balance) }, { label: "Items", value: viewing.lineItems.map((item) => `${item.description} × ${item.quantity} — ${kes(item.amount)}`).join("; ") }, { label: "Notes", value: viewing.notes }] : []} />
     </div>
   )
 }

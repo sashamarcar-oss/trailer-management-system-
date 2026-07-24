@@ -1,4 +1,5 @@
 from django.db import models
+from decimal import Decimal
 
 
 class Invoice(models.Model):
@@ -8,7 +9,10 @@ class Invoice(models.Model):
     ]
 
     invoice_number = models.CharField(max_length=20, unique=True, editable=False)
-    client = models.ForeignKey("clients.Client", on_delete=models.PROTECT, related_name="invoices")
+    client = models.ForeignKey("clients.Client", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoices")
+    client_name = models.CharField(max_length=200, blank=True)
+    client_email = models.EmailField(blank=True)
+    client_phone = models.CharField(max_length=30, blank=True)
     rental = models.ForeignKey("rentals.Rental", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoices")
 
     invoice_date = models.DateField(auto_now_add=True)
@@ -20,6 +24,8 @@ class Invoice(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     is_recurring = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    terms = models.TextField(blank=True)
 
     created_by = models.ForeignKey("users.User", null=True, on_delete=models.SET_NULL, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -41,7 +47,10 @@ class Invoice(models.Model):
 
     @property
     def amount_paid(self):
-        return sum(p.amount for p in self.payments.all())
+        return sum(
+            ((p.amount if p.payment_type != "refund" else -p.amount) for p in self.payments.all()),
+            Decimal("0.00"),
+        )
 
     @property
     def balance(self):
@@ -56,6 +65,7 @@ class InvoiceItem(models.Model):
     description = models.CharField(max_length=255)
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    trailer = models.ForeignKey("trailers.Trailer", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoice_items")
 
     @property
     def subtotal(self):

@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
 import {
   AlertCircle, Download, Eye, FileText, MoreVertical, Pencil, Plus, Search,
   Trash2, Ban, CheckCircle2, ReceiptText,
@@ -14,6 +13,7 @@ import {
   availableCredit, creditUtilizationPercent, exportClientStatementPDF, exportClientsCSV, isOverLimit, kes,
 } from "./client-utils"
 import { ClientFormDialog } from "./ClientFormDialog"
+import { DetailsDialog } from "@/components/ui/DetailsDialog"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -34,8 +34,18 @@ function StatusBadge({ status }: { status: ClientStatus }) {
   )
 }
 
+function actionErrorMessage(error: unknown, fallback: string) {
+  const data = error && typeof error === "object" && "response" in error
+    ? (error as { response?: { data?: unknown } }).response?.data : undefined
+  if (typeof data === "string") return data
+  if (data && typeof data === "object") return Object.entries(data as Record<string, unknown>)
+    .map(([field, value]) => `${field}: ${Array.isArray(value) ? value.join(", ") : String(value)}`).join("; ")
+  return fallback
+}
+
 function ActionsMenu({ client, onAction }: { client: Client; onAction: (action: string) => void }) {
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ bottom: number; right: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,11 +68,11 @@ function ActionsMenu({ client, onAction }: { client: Client; onAction: (action: 
 
   return (
     <div ref={ref} className="relative inline-block text-left">
-      <button onClick={() => setOpen((o) => !o)} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
+      <button onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }); setOpen((o) => !o) }} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
         <MoreVertical className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-border bg-card shadow-lg py-1">
+        <div className="fixed z-50 w-48 rounded-lg border border-border bg-card shadow-lg py-1" style={menuPosition || undefined}>
           {items.map((item) => (
             <button key={item.key} onClick={() => { setOpen(false); onAction(item.key) }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-muted ${item.danger ? "text-red-600" : "text-foreground"}`}>
@@ -76,8 +86,6 @@ function ActionsMenu({ client, onAction }: { client: Client; onAction: (action: 
 }
 
 export default function ClientsPage() {
-  const router = useRouter()
-
   const [rows, setRows] = useState<Client[]>([])
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
@@ -93,6 +101,7 @@ export default function ClientsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
+  const [viewing, setViewing] = useState<Client | null>(null)
   const [actionError, setActionError] = useState("")
 
   const load = useCallback(async () => {
@@ -129,7 +138,7 @@ export default function ClientsPage() {
     setActionError("")
     try {
       switch (action) {
-        case "view": router.push(`/clients/${client.id}`); return
+        case "view": setViewing(client); return
         case "edit": setEditing(client); setDialogOpen(true); return
         case "statement": {
           const lines: StatementLine[] = await clientApi.getStatement(client.id)
@@ -143,8 +152,8 @@ export default function ClientsPage() {
           await clientApi.delete(client.id); await load(); return
         }
       }
-    } catch {
-      setActionError(`Couldn't complete "${action}" for ${client.name}. Please try again.`)
+    } catch (error) {
+      setActionError(actionErrorMessage(error, `Couldn't complete "${action}" for ${client.name}. Please try again.`))
     }
   }
 
@@ -280,6 +289,7 @@ export default function ClientsPage() {
       )}
 
       <ClientFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
+      <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.name || "Client profile"} description={viewing ? `${viewing.code} · ${viewing.client_type}` : undefined} fields={viewing ? [{ label: "Status", value: viewing.status }, { label: "Phone", value: viewing.contact_phone }, { label: "Email", value: viewing.contact_email }, { label: "Address", value: viewing.address }, { label: "Credit limit", value: kes(viewing.credit_limit) }, { label: "Outstanding", value: kes(viewing.outstanding_balance) }, { label: "Payment terms", value: `${viewing.payment_terms_days} days` }, { label: "Notes", value: viewing.notes }] : []} />
     </div>
   )
 }

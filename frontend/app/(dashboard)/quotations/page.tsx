@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
 import {
   AlertCircle, Copy, Download, Eye, FileText, MoreVertical,
   Pencil, Plus, Search, Send, Trash2, ArrowRightCircle, CheckCircle2, XCircle,
@@ -16,6 +15,7 @@ import {
   exportQuotationPDF, exportQuotationsCSV, isExpiringSoon, kes,
 } from "./quotation-utils"
 import { QuotationFormDialog } from "./QuotationFormDialog"
+import { DetailsDialog } from "@/components/ui/DetailsDialog"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -29,6 +29,7 @@ function StatCard({ label, value, valueClass = "text-teal-700" }: { label: strin
 // ── Row actions menu ─────────────────────────────────────────────────────
 function ActionsMenu({ quotation, onAction }: { quotation: Quotation; onAction: (action: string) => void }) {
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ bottom: number; right: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,11 +62,11 @@ function ActionsMenu({ quotation, onAction }: { quotation: Quotation; onAction: 
 
   return (
     <div ref={ref} className="relative inline-block text-left">
-      <button onClick={() => setOpen((o) => !o)} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
+      <button onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }); setOpen((o) => !o) }} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
         <MoreVertical className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-border bg-card shadow-lg py-1">
+        <div className="fixed z-50 w-44 rounded-lg border border-border bg-card shadow-lg py-1" style={menuPosition || undefined}>
           {items.map((item) => (
             <button
               key={item.key}
@@ -84,8 +85,6 @@ function ActionsMenu({ quotation, onAction }: { quotation: Quotation; onAction: 
 }
 
 export default function QuotationsPage() {
-  const router = useRouter()
-
   const [rows, setRows] = useState<Quotation[]>([])
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
@@ -101,6 +100,7 @@ export default function QuotationsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Quotation | null>(null)
+  const [viewing, setViewing] = useState<Quotation | null>(null)
   const [actionError, setActionError] = useState("")
   const [convertingId, setConvertingId] = useState<string | null>(null)
 
@@ -141,9 +141,7 @@ export default function QuotationsPage() {
     setActionError("")
     try {
       switch (action) {
-        case "view":
-          router.push(`/quotations/${quotation.id}`)
-          return
+        case "view": setViewing(quotation); return
         case "edit":
           setEditing(quotation); setDialogOpen(true)
           return
@@ -172,9 +170,8 @@ export default function QuotationsPage() {
         }
         case "convert": {
           setConvertingId(quotation.id)
-          const res = await quotationApi.convert(quotation.id)
+          await quotationApi.convert(quotation.id)
           await load()
-          if (res?.rentalId) router.push(`/rentals/${res.rentalId}`)
           return
         }
         case "delete": {
@@ -341,6 +338,13 @@ export default function QuotationsPage() {
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
       />
+      <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.quotationNumber || "Quotation details"} description={viewing?.clientName} fields={viewing ? [
+        { label: "Status", value: viewing.status }, { label: "Issued", value: viewing.issueDate },
+        { label: "Expires", value: viewing.expiryDate }, { label: "Subtotal", value: kes(viewing.subtotal) },
+        { label: "VAT", value: kes(viewing.vatAmount) }, { label: "Total", value: kes(viewing.total) },
+        { label: "Items", value: viewing.lineItems.map((item) => `${item.description} × ${item.quantity} — ${kes(item.amount)}`).join("; ") },
+        { label: "Notes", value: viewing.notes },
+      ] : []} />
 
       {convertingId && (
         <div className="fixed bottom-4 right-4 px-4 py-3 rounded-lg bg-card border border-border shadow-lg text-sm">

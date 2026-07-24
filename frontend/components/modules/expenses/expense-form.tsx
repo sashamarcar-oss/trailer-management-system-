@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -21,12 +22,13 @@ import { api } from "@/lib/api";
 interface ExpenseFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: (expense: Expense) => void;
+  editing?: Expense | null;
+  onSaved: (expense: Expense, isEdit: boolean) => void;
 }
 
-export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps) {
+export function ExpenseForm({ open, onOpenChange, editing, onSaved }: ExpenseFormProps) {
   const {
-    register, handleSubmit, reset, setValue,
+    register, handleSubmit, reset, setValue, watch,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -35,6 +37,14 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
       status: "Pending",
     },
   });
+
+  useEffect(() => {
+    reset(editing ? {
+      date: editing.date, trailer: editing.trailer || "", category: editing.category as ExpenseFormValues["category"],
+      vendor: editing.vendor || "", amount: Number(editing.amount), paymentMethod: editing.paymentMethod as ExpenseFormValues["paymentMethod"],
+      status: editing.status, notes: editing.notes || "", branch: "",
+    } : { date: new Date().toISOString().slice(0, 10), trailer: "", category: undefined, vendor: "", amount: undefined, paymentMethod: undefined, status: "Pending", notes: "", branch: "" });
+  }, [editing, open, reset]);
 
   async function onSubmit(values: ExpenseFormValues) {
     try {
@@ -55,9 +65,9 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
         (payload as any).branch_name = values.branch;
       }
 
-      const created = await api.expenses.create(payload);
-      onCreated(created);
-      toast.success(`Expense ${created.id} recorded`);
+      const saved = editing ? await api.expenses.update(editing.id, payload) : await api.expenses.create(payload);
+      onSaved(saved, Boolean(editing));
+      toast.success(`Expense ${saved.id} ${editing ? "updated" : "recorded"}`);
       reset();
       onOpenChange(false);
     } catch (error: any) {
@@ -71,7 +81,7 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Record an expense</DialogTitle>
+          <DialogTitle>{editing ? "Edit expense" : "Record an expense"}</DialogTitle>
           <DialogDescription>Log an operational expense against a trailer or the business.</DialogDescription>
         </DialogHeader>
 
@@ -91,7 +101,7 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Category</Label>
-              <Select onValueChange={(v) => setValue("category", v as any, { shouldValidate: true })}>
+              <Select value={watch("category")} onValueChange={(v) => setValue("category", v as any, { shouldValidate: true })}>
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
                   {expenseCategories.map((c) => (
@@ -116,7 +126,7 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
             </div>
             <div>
               <Label>Payment method</Label>
-              <Select onValueChange={(v) => setValue("paymentMethod", v as any, { shouldValidate: true })}>
+              <Select value={watch("paymentMethod")} onValueChange={(v) => setValue("paymentMethod", v as any, { shouldValidate: true })}>
                 <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
                 <SelectContent>
                   {paymentMethods.map((m) => (
@@ -131,7 +141,7 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
           <div>
             <Label>Status</Label>
             <Select
-              defaultValue="Pending"
+              value={watch("status")}
               onValueChange={(v) => setValue("status", v as ExpenseFormValues["status"], { shouldValidate: true })}
             >
               <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
@@ -156,7 +166,7 @@ export function ExpenseForm({ open, onOpenChange, onCreated }: ExpenseFormProps)
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save expense"}</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : editing ? "Save changes" : "Save expense"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
