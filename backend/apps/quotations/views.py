@@ -55,3 +55,45 @@ class QuotationViewSet(viewsets.ModelViewSet):
             quotation.save(update_fields=["status"])
 
         return Response({"rental_id": rental.id, "quotation_id": quotation.id, "status": "converted"}, status=201)
+
+    @action(detail=True, methods=["post"], url_path="convert_to_invoice")
+    def convert_to_invoice(self, request, pk=None):
+        from apps.invoices.models import Invoice, InvoiceItem
+        from apps.invoices.serializers import InvoiceSerializer
+
+        with transaction.atomic():
+            quotation = Quotation.objects.select_for_update().prefetch_related("items__trailer", "invoices").get(pk=pk)
+            existing_invoice = quotation.invoices.order_by("id").first()
+            if existing_invoice:
+                raise ValidationError({"detail": "This quotation has already been converted to an invoice.", "invoice_id": existing_invoice.id})
+            if quotation.status != "accepted":
+                raise ValidationError({"detail": "Only accepted quotations can be converted to an invoice."})
+            if not quotation.client:
+                raise ValidationError({"client": "Link the quotation to a saved client before converting it to an invoice."})
+            if not quotation.items.exists():
+                raise ValidationError({"items": "Add at least one item before converting this quotation."})
+
+            due_date = timezone.localdate() + timedelta(days=30)
+            invoice = Invoice.objects.create(
+                client=quotation.client,
+                quotation=quotation,
+                due_date=due_date,
+                status="pending",
+                notes=quotation.notes,
+                terms=quotation.terms,
+                discount=quotation.discount,
+                tax=quotation.tax,
+                created_by=request.user,
+            )
+            for item in quotation.items.all():
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    trailer=item.trailer,
+                    description=item.description or (item.trailer.trailer_number if item.trailer else "Trailer rental"),
+                    quantity=item.duration_days,
+                    unit_price=item.rate_per_day,
+                )
+            quotation.status = "converted"
+            quotation.save(update_fields=["status"])
+
+        return Response(InvoiceSerializer(invoice).data, status=201)

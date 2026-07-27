@@ -27,6 +27,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
     total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     amount_paid = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    sourceType = serializers.SerializerMethodField()
+    sourceId = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -59,3 +61,17 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     def get_client_name(self, obj):
         return obj.client.name if obj.client else obj.client_name
+
+    def get_sourceType(self, obj):
+        if obj.quotation is not None:
+            return "quotation"
+        if obj.rental is not None:
+            return "rental"
+        return None
+
+    def get_sourceId(self, obj):
+        if obj.quotation is not None:
+            return str(obj.quotation.id)
+        if obj.rental is not None:
+            return str(obj.rental.id)
+        return None

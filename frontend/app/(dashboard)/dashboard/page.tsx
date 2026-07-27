@@ -7,7 +7,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  Truck, Users, DollarSign, AlertTriangle, FileText, Wallet, TrendingUp, ClipboardList,
+  Truck, Users, DollarSign, AlertTriangle, FileText, Wallet, TrendingUp, ClipboardList, Sparkles,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -321,29 +321,38 @@ export default function DashboardPage() {
 
   return (
     <div className={`${displayFont.variable} ${monoFont.variable}`}>
-      <div className="mb-5 flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-xl font-semibold" style={{ color: COLORS.ink }}>Dispatch Overview</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Fleet health and financial pulse, at a glance</p>
+      <div className="mb-6 rounded-2xl border border-border/80 bg-gradient-to-r from-teal-50 via-white to-sky-50 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-teal-700">
+              <Sparkles className="h-3.5 w-3.5" /> Operations snapshot
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">Fleet health, receivables, and cash flow in one polished view.</p>
+          </div>
+          <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 text-right shadow-sm">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Today</p>
+            <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-mono-data)", color: COLORS.tealDeep }}>
+              {new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          </div>
         </div>
-        <p className="text-xs" style={{ fontFamily: "var(--font-mono-data)", color: COLORS.tealDeep }}>
-          {new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-        </p>
       </div>
 
       {error ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</div>
       ) : null}
 
-      <Card>
+      <Card className="overflow-hidden border border-teal-100 bg-gradient-to-br from-white via-teal-50/40 to-sky-50/60 p-5 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-center">
-          <FleetGauge fleet={dashboardState.fleet} />
-          <div className="flex divide-x" style={{ borderColor: COLORS.track }}>
+          <div className="rounded-2xl border border-white/70 bg-white/80 p-3 shadow-sm">
+            <FleetGauge fleet={dashboardState.fleet} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {dashboardState.tripComputer.map((t, i) => (
-              <div key={t.label} className={`flex-1 px-4 ${i === 0 ? "pl-0" : ""}`}>
-                <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{t.label}</p>
-                <p className="text-xl font-bold mt-1.5" style={{ fontFamily: "var(--font-display)", color: COLORS.ink }}>{t.value}</p>
-                <p className="text-[11px] mt-1" style={{ color: t.trendColor }}>{t.trend}</p>
+              <div key={t.label} className="rounded-2xl border border-border/70 bg-white/80 p-4 shadow-sm">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">{t.label}</p>
+                <p className="mt-2 text-xl font-bold" style={{ fontFamily: "var(--font-display)", color: COLORS.ink }}>{t.value}</p>
+                <p className="mt-1 text-[11px]" style={{ color: t.trendColor }}>{t.trend}</p>
               </div>
             ))}
           </div>
@@ -354,29 +363,35 @@ export default function DashboardPage() {
         {dashboardState.secondaryStats.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.label}>
-              <div className="flex items-start justify-between mb-2.5">
-                <span className="text-xs text-muted-foreground">{s.label}</span>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-teal-light">
-                  <Icon size={15} className="text-teal" />
+            <Card key={s.label} className="rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
+              <div className="mb-3 flex items-start justify-between">
+                <span className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">{s.label}</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                  <Icon size={15} />
                 </div>
               </div>
               <p className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)", color: COLORS.ink }}>{s.value}</p>
               {"bar" in s && s.bar !== undefined ? (
-                <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{ background: COLORS.track }}>
+                <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: COLORS.track }}>
                   <div className="h-full rounded-full" style={{ width: `${s.bar}%`, background: COLORS.teal }} />
                 </div>
               ) : (
-                <p className="text-xs mt-1 text-muted-foreground">{s.trend}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{s.trend}</p>
               )}
             </Card>
           );
         })}
       </div>
 
-      <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)" }}>
-        <Card>
-          <p className="text-sm font-medium mb-4" style={{ color: COLORS.ink }}>Revenue vs expenses (KES millions)</p>
+      <div className="mb-4 grid gap-4" style={{ gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)" }}>
+        <Card className="rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: COLORS.ink }}>Revenue vs expenses</p>
+              <p className="text-xs text-muted-foreground">KES millions over the last six months</p>
+            </div>
+            <div className="rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-teal-700">Live trend</div>
+          </div>
           <div style={{ width: "100%", height: 260 }}>
             <ResponsiveContainer>
               <AreaChart data={dashboardState.revenueTrend}>
@@ -402,8 +417,14 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card>
-          <p className="text-sm font-medium mb-4" style={{ color: COLORS.ink }}>Expense breakdown</p>
+        <Card className="rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: COLORS.ink }}>Expense breakdown</p>
+              <p className="text-xs text-muted-foreground">Where spend is concentrated</p>
+            </div>
+            <div className="rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-sky-700">Budget view</div>
+          </div>
           <div className="relative" style={{ width: "100%", height: 260 }}>
             <ResponsiveContainer>
               <PieChart>
@@ -427,15 +448,27 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)" }}>
-        <Card>
-          <p className="text-sm font-medium mb-5" style={{ color: COLORS.ink }}>Trailer utilization by type</p>
+        <Card className="rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: COLORS.ink }}>Trailer utilization by type</p>
+              <p className="text-xs text-muted-foreground">Capacity versus current deployment</p>
+            </div>
+            <div className="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700">Fleet mix</div>
+          </div>
           <div className="space-y-4">
             {dashboardState.utilization.map((u) => <LoadGaugeBar key={u.type} type={u.type} pct={u.pct} />)}
           </div>
         </Card>
 
-        <Card>
-          <p className="text-sm font-medium mb-4" style={{ color: COLORS.ink }}>Dispatch log</p>
+        <Card className="rounded-2xl border border-border/70 bg-white/90 p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: COLORS.ink }}>Dispatch log</p>
+              <p className="text-xs text-muted-foreground">Recent system activity and updates</p>
+            </div>
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-600">Timeline</div>
+          </div>
           <div className="relative pl-4">
             <div className="absolute left-[5px] top-1.5 bottom-1.5 w-px" style={{ background: COLORS.track }} />
             {dashboardState.dispatchLog.map((a, i) => (

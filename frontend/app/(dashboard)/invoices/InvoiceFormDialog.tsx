@@ -10,13 +10,13 @@ type DraftLineItem = {
   key: string
   trailerId?: string | null
   description: string
-  quantity: number
-  rate: number
+  quantity: number | ""
+  rate: number | ""
   rateUnit: "day" | "week" | "month" | "flat"
 }
 
 function emptyLineItem(): DraftLineItem {
-  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: 0, rateUnit: "day" }
+  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: "", rateUnit: "day" }
 }
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 function in30DaysISO() {
@@ -41,7 +41,7 @@ export function InvoiceFormDialog({
   const [date, setDate] = useState(todayISO())
   const [dueDate, setDueDate] = useState(in30DaysISO())
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
-  const [discountPercent, setDiscountPercent] = useState(0)
+  const [discountPercent, setDiscountPercent] = useState<number | "">("")
   const [vatPercent, setVatPercent] = useState(DEFAULT_VAT_PERCENT)
   const [notes, setNotes] = useState("")
   const [terms, setTerms] = useState("Payment due within 30 days of invoice date.")
@@ -71,7 +71,7 @@ export function InvoiceFormDialog({
             }))
           : [emptyLineItem()],
       )
-      setDiscountPercent(editing.discountPercent || 0)
+      setDiscountPercent(editing.discountPercent ?? "")
       setVatPercent(editing.vatPercent ?? DEFAULT_VAT_PERCENT)
       setNotes(editing.notes || "")
       setTerms(editing.terms || "")
@@ -79,7 +79,7 @@ export function InvoiceFormDialog({
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setDate(todayISO()); setDueDate(in30DaysISO())
       setItems([emptyLineItem()])
-      setDiscountPercent(0); setVatPercent(DEFAULT_VAT_PERCENT)
+      setDiscountPercent(""); setVatPercent(DEFAULT_VAT_PERCENT)
       setNotes(""); setTerms("Payment due within 30 days of invoice date.")
     }
     setError("")
@@ -111,8 +111,11 @@ export function InvoiceFormDialog({
       clientPhone: clientPhone.trim() || undefined,
       date, dueDate,
       lineItems: items.map((it) => ({
-        trailerId: it.trailerId || null, description: it.description.trim(),
-        quantity: Number(it.quantity) || 0, rate: Number(it.rate) || 0, rateUnit: it.rateUnit,
+        trailerId: it.trailerId || null,
+        description: it.description.trim(),
+        quantity: Number(it.quantity) || 0,
+        rate: Number(it.rate) || 0,
+        rateUnit: it.rateUnit,
       })),
       discountPercent: Number(discountPercent) || 0,
       vatPercent: Number(vatPercent) || 0,
@@ -158,9 +161,18 @@ export function InvoiceFormDialog({
               <select
                 value={clientId}
                 onChange={(e) => {
-                  const id = e.target.value; setClientId(id)
-                  const c = clients.find((cl) => cl.id === id)
-                  if (c) { setClientName(c.name); setClientEmail(c.email || ""); setClientPhone(c.phone || "") }
+                  const id = String(e.target.value)
+                  setClientId(id)
+                  const c = clients.find((cl) => String(cl.id) === id)
+                  if (c) {
+                    setClientName(c.name)
+                    setClientEmail(c.email || "")
+                    setClientPhone(c.phone || "")
+                  } else if (!id) {
+                    setClientName("")
+                    setClientEmail("")
+                    setClientPhone("")
+                  }
                 }}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm"
               >
@@ -212,10 +224,12 @@ export function InvoiceFormDialog({
                     value={it.description} onChange={(e) => updateItem(it.key, { description: e.target.value })}
                     placeholder="Description" className="col-span-4 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
                   <input
-                    type="number" min={0} value={it.quantity} onChange={(e) => updateItem(it.key, { quantity: Number(e.target.value) })}
+                    type="number" min={0} value={it.quantity}
+                    onChange={(e) => updateItem(it.key, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
                     className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
                   <input
-                    type="number" min={0} value={it.rate} onChange={(e) => updateItem(it.key, { rate: Number(e.target.value) })}
+                    type="number" min={0} value={it.rate}
+                    onChange={(e) => updateItem(it.key, { rate: e.target.value === "" ? "" : Number(e.target.value) })}
                     className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
                   <select
                     value={it.rateUnit} onChange={(e) => updateItem(it.key, { rateUnit: e.target.value as DraftLineItem["rateUnit"] })}
@@ -237,15 +251,11 @@ export function InvoiceFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Discount (%)</label>
-              <input type="number" min={0} max={100} value={discountPercent} onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">VAT (%)</label>
-              <input type="number" min={0} max={100} value={vatPercent} onChange={(e) => setVatPercent(Number(e.target.value))}
+              <input type="number" min={0} max={100} value={discountPercent}
+                onChange={(e) => setDiscountPercent(e.target.value === "" ? "" : Number(e.target.value))}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
           </div>
@@ -253,7 +263,6 @@ export function InvoiceFormDialog({
           <div className="rounded-lg bg-muted/40 border border-border p-4 space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{kes(totals.subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Discount ({discountPercent}%)</span><span>- {kes(totals.discountAmount)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">VAT ({vatPercent}%)</span><span>{kes(totals.vatAmount)}</span></div>
             <div className="flex justify-between font-bold text-base pt-1.5 border-t border-border"><span>Total</span><span className="text-teal-700">{kes(totals.total)}</span></div>
           </div>
 

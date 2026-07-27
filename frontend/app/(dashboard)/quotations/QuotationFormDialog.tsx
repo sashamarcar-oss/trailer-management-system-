@@ -4,19 +4,19 @@ import { useEffect, useMemo, useState } from "react"
 import { Plus, Trash2, X } from "lucide-react"
 import { api } from "@/lib/api"
 import type { ClientLite, Quotation, QuotationPayload, TrailerLite } from "./types-and-api-notes"
-import { DEFAULT_VAT_PERCENT, computeTotals, kes, lineItemAmount } from "./quotation-utils"
+import { computeTotals, kes, lineItemAmount } from "./quotation-utils"
 
 type DraftLineItem = {
   key: string // local-only key for React lists, not sent to API
   trailerId?: string | null
   description: string
-  quantity: number
-  rate: number
+  quantity: number | ""
+  rate: number | ""
   rateUnit: "day" | "week" | "month" | "flat"
 }
 
 function emptyLineItem(): DraftLineItem {
-  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: 0, rateUnit: "day" }
+  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: "", rateUnit: "day" }
 }
 
 function todayISO() {
@@ -46,8 +46,8 @@ export function QuotationFormDialog({
   const [issueDate, setIssueDate] = useState(todayISO())
   const [expiryDate, setExpiryDate] = useState(in14DaysISO())
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
-  const [discountPercent, setDiscountPercent] = useState(0)
-  const [vatPercent, setVatPercent] = useState(DEFAULT_VAT_PERCENT)
+  const [discountPercent, setDiscountPercent] = useState<number | "">("")
+  const [vatPercent, setVatPercent] = useState(0)
   const [notes, setNotes] = useState("")
   const [terms, setTerms] = useState("Quotation valid for 14 days from issue date. Prices subject to change thereafter.")
   const [saving, setSaving] = useState(false)
@@ -88,15 +88,15 @@ export function QuotationFormDialog({
             }))
           : [emptyLineItem()],
       )
-      setDiscountPercent(editing.discountPercent || 0)
-      setVatPercent(editing.vatPercent ?? DEFAULT_VAT_PERCENT)
+      setDiscountPercent(editing.discountPercent ?? "")
+      setVatPercent(editing.vatPercent ?? 0)
       setNotes(editing.notes || "")
       setTerms(editing.terms || "")
     } else {
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setIssueDate(todayISO()); setExpiryDate(in14DaysISO())
       setItems([emptyLineItem()])
-      setDiscountPercent(0); setVatPercent(DEFAULT_VAT_PERCENT)
+      setDiscountPercent(""); setVatPercent(0)
       setNotes("")
       setTerms("Quotation valid for 14 days from issue date. Prices subject to change thereafter.")
     }
@@ -189,10 +189,18 @@ export function QuotationFormDialog({
               <select
                 value={clientId}
                 onChange={(e) => {
-                  const id = e.target.value
+                  const id = String(e.target.value)
                   setClientId(id)
-                  const c = clients.find((cl) => cl.id === id)
-                  if (c) { setClientName(c.name); setClientEmail(c.email || ""); setClientPhone(c.phone || "") }
+                  const c = clients.find((cl) => String(cl.id) === id)
+                  if (c) {
+                    setClientName(c.name)
+                    setClientEmail(c.email || "")
+                    setClientPhone(c.phone || "")
+                  } else if (!id) {
+                    setClientName("")
+                    setClientEmail("")
+                    setClientPhone("")
+                  }
                 }}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm"
               >
@@ -268,12 +276,12 @@ export function QuotationFormDialog({
                   />
                   <input
                     type="number" min={0} value={it.quantity}
-                    onChange={(e) => updateItem(it.key, { quantity: Number(e.target.value) })}
+                    onChange={(e) => updateItem(it.key, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
                     className="col-span-1 px-2 py-2 rounded-lg border border-input bg-card text-xs"
                   />
                   <input
                     type="number" min={0} value={it.rate}
-                    onChange={(e) => updateItem(it.key, { rate: Number(e.target.value) })}
+                    onChange={(e) => updateItem(it.key, { rate: e.target.value === "" ? "" : Number(e.target.value) })}
                     className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs"
                   />
                   <select
@@ -298,18 +306,12 @@ export function QuotationFormDialog({
             </div>
           </div>
 
-          {/* Discount / VAT */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Discount */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Discount (%)</label>
               <input type="number" min={0} max={100} value={discountPercent}
-                onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">VAT (%)</label>
-              <input type="number" min={0} max={100} value={vatPercent}
-                onChange={(e) => setVatPercent(Number(e.target.value))}
+                onChange={(e) => setDiscountPercent(e.target.value === "" ? "" : Number(e.target.value))}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
           </div>
@@ -318,7 +320,6 @@ export function QuotationFormDialog({
           <div className="rounded-lg bg-muted/40 border border-border p-4 space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{kes(totals.subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Discount ({discountPercent}%)</span><span>- {kes(totals.discountAmount)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">VAT ({vatPercent}%)</span><span>{kes(totals.vatAmount)}</span></div>
             <div className="flex justify-between font-bold text-base pt-1.5 border-t border-border"><span>Total</span><span className="text-teal-700">{kes(totals.total)}</span></div>
           </div>
 

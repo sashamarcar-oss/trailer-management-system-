@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 from .models import Branch, CompanySettings, AuditLog
 from .serializers import BranchSerializer, CompanySettingsSerializer, AuditLogSerializer
-from apps.users.permissions import IsSuperAdmin
+from apps.users.permissions import IsAdministratorOrAbove, IsSuperAdmin
 
 
 class BranchViewSet(viewsets.ModelViewSet):
@@ -21,7 +21,7 @@ class CompanySettingsViewSet(viewsets.ModelViewSet):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.select_related("user").all()
     serializer_class = AuditLogSerializer
-    permission_classes = [IsSuperAdmin]
+    permission_classes = [IsAdministratorOrAbove]
     filterset_fields = ["action", "model_name", "user"]
     ordering_fields = ["created_at"]
 

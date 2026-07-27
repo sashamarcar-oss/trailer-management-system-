@@ -2,8 +2,18 @@ import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import type { Client, StatementLine } from "./types-and-api-notes"
 
+export function formatCurrency(value: number, currency: "USD" | "KES" = "KES"): string {
+  const locale = currency === "USD" ? "en-US" : "en-KE"
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0)
+}
+
 export function kes(value: number): string {
-  return `KES ${Number(value || 0).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return formatCurrency(value, "KES")
 }
 
 // ── Credit control ─────────────────────────────────────────────────────────
@@ -78,9 +88,9 @@ export function exportClientStatementPDF(client: Client, lines: StatementLine[],
     head: [["Date", "Type", "Reference", "Debit", "Credit", "Balance"]],
     body: lines.map((l) => [
       l.date, l.type, l.reference,
-      l.debit ? kes(l.debit) : "—",
-      l.credit ? kes(l.credit) : "—",
-      kes(l.runningBalance),
+      l.debit ? formatCurrency(l.debit, client.currency || "USD") : "—",
+      l.credit ? formatCurrency(l.credit, client.currency || "USD") : "—",
+      formatCurrency(l.runningBalance, client.currency || "USD"),
     ]),
     styles: { fontSize: 8 },
     headStyles: { fillColor: [15, 110, 86] },
@@ -90,7 +100,7 @@ export function exportClientStatementPDF(client: Client, lines: StatementLine[],
   // @ts-expect-error jspdf-autotable attaches lastAutoTable at runtime
   const y = (doc.lastAutoTable?.finalY ?? 96) + 24
   doc.setFontSize(11)
-  doc.text(`Closing Balance: ${kes(client.outstanding_balance)}`, 380, y)
+  doc.text(`Closing Balance: ${formatCurrency(client.outstanding_balance, client.currency || "USD")}`, 380, y)
 
   doc.save(`statement-${client.code}-${new Date().toISOString().slice(0, 10)}.pdf`)
 }

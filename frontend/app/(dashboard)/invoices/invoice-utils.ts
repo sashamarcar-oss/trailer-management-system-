@@ -6,17 +6,17 @@ export const DEFAULT_VAT_PERCENT = 16
 export const INVOICE_STATUSES: InvoiceStatus[] = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Void"]
 
 export function kes(value: number): string {
-  return `KES ${Number(value || 0).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `USD ${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export function lineItemAmount(item: Pick<InvoiceLineItem, "quantity" | "rate">): number {
+export function lineItemAmount(item: Pick<InvoiceLineItem, "quantity" | "rate"> | { quantity: number; rate: number | string }): number {
   return Number(item.quantity || 0) * Number(item.rate || 0)
 }
 
 export function computeTotals(
-  lineItems: Pick<InvoiceLineItem, "quantity" | "rate">[],
-  discountPercent: number,
-  vatPercent: number,
+  lineItems: Array<Pick<InvoiceLineItem, "quantity" | "rate"> | { quantity: number | string; rate: number | string }>,
+  discountPercent: number | string,
+  vatPercent: number | string,
 ) {
   const subtotal = lineItems.reduce((sum, li) => sum + lineItemAmount(li), 0)
   const discountAmount = subtotal * (Number(discountPercent || 0) / 100)
@@ -73,14 +73,20 @@ export function canSend(status: InvoiceStatus): boolean {
 export function canRecordPayment(invoice: Invoice): boolean {
   return invoice.status !== "Void" && invoice.balance > 0
 }
+export function canViewPaymentHistory(invoice: Invoice): boolean {
+  return invoice.payments.length > 0
+}
 export function canRefund(invoice: Invoice): boolean {
   return invoice.status === "Paid" && invoice.amountPaid > 0
 }
-export function canVoid(status: InvoiceStatus): boolean {
-  return status !== "Void" && status !== "Paid"
+export function canVoid(invoice: Invoice): boolean {
+  return (invoice.status === "Draft" || invoice.status === "Sent") && invoice.amountPaid <= 0
 }
 export function canRemind(invoice: Invoice): boolean {
   return isOverdue(invoice)
+}
+export function canResend(status: InvoiceStatus): boolean {
+  return status === "Sent" || status === "Partially Paid" || status === "Overdue" || status === "Paid"
 }
 
 // ── CSV export (list, for accounting reconciliation) ────────────────────

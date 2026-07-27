@@ -27,8 +27,13 @@ export function ClientFormDialog({
   const [address, setAddress] = useState("")
   const [kraPin, setKraPin] = useState("")
   const [businessRegistration, setBusinessRegistration] = useState("")
-  const [nationalId, setNationalId] = useState("")
   const [passport, setPassport] = useState("")
+  const [currency, setCurrency] = useState<"USD" | "KES">("USD")
+  const [driversLicenseFile, setDriversLicenseFile] = useState<File | null>(null)
+  const [insuranceFile, setInsuranceFile] = useState<File | null>(null)
+  const [dotFile, setDotFile] = useState<File | null>(null)
+  const [signedContractFile, setSignedContractFile] = useState<File | null>(null)
+  const [inspectionReportFile, setInspectionReportFile] = useState<File | null>(null)
   const [creditLimit, setCreditLimit] = useState(0)
   const [paymentTermsDays, setPaymentTermsDays] = useState(30)
   const [notes, setNotes] = useState("")
@@ -47,15 +52,16 @@ export function ClientFormDialog({
       setAddress(editing.address || "")
       setKraPin(editing.kra_pin || "")
       setBusinessRegistration(editing.business_registration || "")
-      setNationalId(editing.national_id || "")
       setPassport(editing.passport || "")
+      setCurrency(editing.currency || "USD")
       setCreditLimit(editing.credit_limit || 0)
       setPaymentTermsDays(editing.payment_terms_days ?? 30)
       setNotes(editing.notes || "")
     } else {
       setName(""); setClientType("Individual"); setContactPhone(""); setContactEmail("")
       setSecondaryContactName(""); setSecondaryContactPhone(""); setAddress("")
-      setKraPin(""); setBusinessRegistration(""); setNationalId(""); setPassport("")
+      setKraPin(""); setBusinessRegistration(""); setPassport(""); setCurrency("USD")
+      setDriversLicenseFile(null); setInsuranceFile(null); setDotFile(null); setSignedContractFile(null); setInspectionReportFile(null)
       setCreditLimit(0); setPaymentTermsDays(30); setNotes("")
     }
     setError("")
@@ -70,7 +76,7 @@ export function ClientFormDialog({
     if (!contactPhone.trim()) { setError("A contact phone number is required."); return }
     if (!contactEmail.trim()) { setError("An email address is required."); return }
     if (clientType === "Company" && (!kraPin.trim() || !businessRegistration.trim())) { setError("Company clients require a KRA PIN and business registration number."); return }
-    if (clientType === "Individual" && !nationalId.trim() && !passport.trim()) { setError("Individual clients require a National ID or passport number."); return }
+    if (clientType === "Individual" && !passport.trim()) { setError("Individual clients require a passport number."); return }
 
     const payload: ClientPayload = {
       name: name.trim(),
@@ -82,8 +88,13 @@ export function ClientFormDialog({
       address: address.trim() || undefined,
       kra_pin: clientType === "Company" ? kraPin.trim() || undefined : undefined,
       business_registration: clientType === "Company" ? businessRegistration.trim() || undefined : undefined,
-      national_id: clientType === "Individual" ? nationalId.trim() || undefined : undefined,
       passport: clientType === "Individual" ? passport.trim() || undefined : undefined,
+      currency,
+      drivers_license_file: driversLicenseFile,
+      insurance_file: insuranceFile,
+      dot_file: dotFile,
+      signed_contract_file: signedContractFile,
+      inspection_report_file: inspectionReportFile,
       credit_limit: Number(creditLimit) || 0,
       payment_terms_days: Number(paymentTermsDays) || undefined,
       notes: notes.trim() || undefined,
@@ -137,43 +148,74 @@ export function ClientFormDialog({
               <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Currency</label>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value as "USD" | "KES")}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm">
+                <option value="USD">US Dollars (USD)</option>
+                <option value="KES">Kenyan Shillings (KES)</option>
+              </select>
+            </div>
           </div>
 
           {clientType === "Company" && (
-            <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/30 border border-border">
-              <div className="col-span-2">
-                <p className="text-xs font-semibold text-muted-foreground mb-1">Day-to-day contact person</p>
+            <div className="space-y-4 p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Day-to-day contact person</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Name</label>
+                  <input value={secondaryContactName} onChange={(e) => setSecondaryContactName(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Phone</label>
+                  <input value={secondaryContactPhone} onChange={(e) => setSecondaryContactPhone(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">KRA PIN *</label>
+                  <input value={kraPin} onChange={(e) => setKraPin(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Business registration *</label>
+                  <input value={businessRegistration} onChange={(e) => setBusinessRegistration(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+                </div>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Name</label>
-                <input value={secondaryContactName} onChange={(e) => setSecondaryContactName(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Phone</label>
-                <input value={secondaryContactPhone} onChange={(e) => setSecondaryContactPhone(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">KRA PIN *</label>
-                <input value={kraPin} onChange={(e) => setKraPin(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Business registration *</label>
-                <input value={businessRegistration} onChange={(e) => setBusinessRegistration(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-sm font-semibold">US logistics company document uploads</p>
+                <p className="text-xs text-muted-foreground mt-1">Documents required from lessee prior leasing: driver's license, insurance, DOT documentation. Documents required from lessor after leasing: signed contract, signed inspection report.</p>
+                <div className="grid grid-cols-1 gap-3 mt-4">
+                  <label className="block text-xs text-muted-foreground">Driver's license (lessee)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => setDriversLicenseFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+                  {driversLicenseFile && <p className="text-xs text-muted-foreground">Selected: {driversLicenseFile.name}</p>}
+
+                  <label className="block text-xs text-muted-foreground">Insurance document (lessee)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => setInsuranceFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+                  {insuranceFile && <p className="text-xs text-muted-foreground">Selected: {insuranceFile.name}</p>}
+
+                  <label className="block text-xs text-muted-foreground">DOT documentation (lessee)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => setDotFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+                  {dotFile && <p className="text-xs text-muted-foreground">Selected: {dotFile.name}</p>}
+
+                  <label className="block text-xs text-muted-foreground">Signed contract (lessor)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => setSignedContractFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+                  {signedContractFile && <p className="text-xs text-muted-foreground">Selected: {signedContractFile.name}</p>}
+
+                  <label className="block text-xs text-muted-foreground">Signed inspection report (lessor)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => setInspectionReportFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+                  {inspectionReportFile && <p className="text-xs text-muted-foreground">Selected: {inspectionReportFile.name}</p>}
+                </div>
               </div>
             </div>
           )}
 
           {clientType === "Individual" && (
-            <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/30 border border-border">
-              <div>
-                <label className="text-xs text-muted-foreground">National ID</label>
-                <input value={nationalId} onChange={(e) => setNationalId(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-              </div>
+            <div className="grid grid-cols-1 gap-4 p-3 rounded-lg bg-muted/30 border border-border">
               <div>
                 <label className="text-xs text-muted-foreground">Passport</label>
                 <input value={passport} onChange={(e) => setPassport(e.target.value)}
@@ -190,7 +232,7 @@ export function ClientFormDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Credit limit (KES)</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Credit limit ({currency})</label>
               <input type="number" min={0} value={creditLimit} onChange={(e) => setCreditLimit(Number(e.target.value))}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>

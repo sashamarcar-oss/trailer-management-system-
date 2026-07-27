@@ -5,8 +5,6 @@ import { X, AlertTriangle } from "lucide-react"
 import type { Rental } from "./types-and-api-notes"
 import { rentalApi } from "./rental-api"
 
-const FUEL_LEVELS = ["Empty", "1/4", "1/2", "3/4", "Full"] as const
-
 export function CheckoutDialog({
   rental,
   onClose,
@@ -16,8 +14,6 @@ export function CheckoutDialog({
   onClose: () => void
   onDone: () => Promise<void> | void
 }) {
-  const [odometerOrHours, setOdometerOrHours] = useState<number | "">("")
-  const [fuelLevel, setFuelLevel] = useState<typeof FUEL_LEVELS[number]>("Full")
   const [conditionNotes, setConditionNotes] = useState("")
   const [damageNoted, setDamageNoted] = useState(false)
   const [damageNotes, setDamageNotes] = useState("")
@@ -26,7 +22,7 @@ export function CheckoutDialog({
 
   useEffect(() => {
     if (rental) {
-      setOdometerOrHours(""); setFuelLevel("Full"); setConditionNotes("")
+      setConditionNotes("")
       setDamageNoted(false); setDamageNotes(""); setError("")
     }
   }, [rental])
@@ -42,8 +38,6 @@ export function CheckoutDialog({
     try {
       await rentalApi.activate(rental!.id, {
         checkoutInspection: {
-          odometerOrHours: odometerOrHours === "" ? undefined : Number(odometerOrHours),
-          fuelLevel,
           conditionNotes: conditionNotes.trim(),
           damageNoted,
           damageNotes: damageNoted ? damageNotes.trim() || undefined : undefined,
@@ -76,21 +70,6 @@ export function CheckoutDialog({
 
           <div className="rounded-lg bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
             {rental.trailers.map((t) => t.trailerName).join(", ")}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Odometer / hours</label>
-              <input type="number" value={odometerOrHours} onChange={(e) => setOdometerOrHours(e.target.value === "" ? "" : Number(e.target.value))}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fuel level</label>
-              <select value={fuelLevel} onChange={(e) => setFuelLevel(e.target.value as typeof FUEL_LEVELS[number])}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm">
-                {FUEL_LEVELS.map((f) => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
           </div>
 
           <div>

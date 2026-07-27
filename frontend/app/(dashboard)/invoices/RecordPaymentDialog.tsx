@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { FormEvent, useEffect, useState } from "react"
 import { X } from "lucide-react"
 import type { Invoice, PaymentMethod, PaymentPayload } from "./types-and-api-notes"
 import { paymentApi } from "./invoice-api"
@@ -32,7 +32,7 @@ export function RecordPaymentDialog({
 }: {
   invoice: Invoice | null // null = closed
   onClose: () => void
-  onRecorded: () => Promise<void> | void
+  onRecorded: (invoice?: Invoice) => Promise<void> | void
   mode?: "payment" | "refund"
 }) {
   const [amount, setAmount] = useState(0)
@@ -59,7 +59,7 @@ export function RecordPaymentDialog({
   const isRefund = mode === "refund"
   const amountLimit = isRefund ? invoice.amountPaid : invoice.balance
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError("")
 
@@ -73,8 +73,8 @@ export function RecordPaymentDialog({
 
     setSaving(true)
     try {
-      await paymentApi.record(invoice!.id, payload, isRefund ? "refund" : "partial")
-      await onRecorded()
+      const result = await paymentApi.record(invoice!.id, payload, isRefund ? "refund" : "partial")
+      await onRecorded(result.invoice)
       onClose()
     } catch (error) {
       setError(apiErrorMessage(error))

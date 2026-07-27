@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const expenseCategories = [
-  "Fuel", "Repairs", "Maintenance", "Tyres", "Insurance", "License", "Staff",
+  "Repairs", "Maintenance", "Tyres", "Insurance", "License", "Staff",
   "Office", "Utilities", "Cleaning", "Parking", "Security", "Marketing",
   "Legal", "Equipment", "Travel", "Miscellaneous",
 ] as const;

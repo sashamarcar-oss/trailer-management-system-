@@ -20,6 +20,11 @@ class ClientSerializer(serializers.ModelSerializer):
     client_notes = ClientNoteSerializer(many=True, read_only=True)
     client_type_display = serializers.CharField(source="get_client_type_display", read_only=True)
     preferred_payment_terms_display = serializers.CharField(source="get_preferred_payment_terms_display", read_only=True)
+    drivers_license_file = serializers.FileField(write_only=True, required=False, allow_null=True)
+    insurance_file = serializers.FileField(write_only=True, required=False, allow_null=True)
+    dot_file = serializers.FileField(write_only=True, required=False, allow_null=True)
+    signed_contract_file = serializers.FileField(write_only=True, required=False, allow_null=True)
+    inspection_report_file = serializers.FileField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Client
@@ -39,6 +44,39 @@ class ClientSerializer(serializers.ModelSerializer):
         }
         return mapping.get(value.strip().lower(), value.strip().lower())
 
+    def create(self, validated_data):
+        document_files = self._pop_document_files(validated_data)
+        client = super().create(validated_data)
+        self._create_client_documents(client, document_files)
+        return client
+
+    def update(self, instance, validated_data):
+        document_files = self._pop_document_files(validated_data)
+        client = super().update(instance, validated_data)
+        self._create_client_documents(client, document_files)
+        return client
+
+    def _pop_document_files(self, validated_data):
+        return {
+            "drivers_license_file": validated_data.pop("drivers_license_file", None),
+            "insurance_file": validated_data.pop("insurance_file", None),
+            "dot_file": validated_data.pop("dot_file", None),
+            "signed_contract_file": validated_data.pop("signed_contract_file", None),
+            "inspection_report_file": validated_data.pop("inspection_report_file", None),
+        }
+
+    def _create_client_documents(self, client, files):
+        labels = {
+            "drivers_license_file": "Driver's license",
+            "insurance_file": "Insurance document",
+            "dot_file": "DOT documentation",
+            "signed_contract_file": "Signed contract",
+            "inspection_report_file": "Signed inspection report",
+        }
+        for field_name, file_obj in files.items():
+            if file_obj:
+                ClientDocument.objects.create(client=client, label=labels[field_name], file=file_obj)
+
     def validate(self, attrs):
         client_type = attrs.get("client_type", getattr(self.instance, "client_type", None))
         if client_type == "company":
@@ -49,7 +87,6 @@ class ClientSerializer(serializers.ModelSerializer):
                     "business_registration": "Business registration number is required for a company client."
                 })
         if client_type == "individual":
-            if not attrs.get("national_id", getattr(self.instance, "national_id", "")) and \
-               not attrs.get("passport", getattr(self.instance, "passport", "")):
-                raise serializers.ValidationError({"national_id": "Provide a National ID or Passport number."})
+            if not attrs.get("passport", getattr(self.instance, "passport", "")):
+                raise serializers.ValidationError({"passport": "Passport number is required for an individual client."})
         return attrs

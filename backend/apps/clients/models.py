@@ -26,6 +26,12 @@ class Client(models.Model):
     passport = models.CharField(max_length=30, blank=True)
     business_registration = models.CharField(max_length=60, blank=True)
 
+    CURRENCY_CHOICES = [
+        ("USD", "US Dollars"),
+        ("KES", "Kenyan Shillings"),
+    ]
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
+
     credit_limit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     outstanding_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     preferred_payment_terms = models.CharField(max_length=10, choices=PAYMENT_TERMS_CHOICES, default="net_30")

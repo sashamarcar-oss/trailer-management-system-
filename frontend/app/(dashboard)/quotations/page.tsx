@@ -104,6 +104,23 @@ export default function QuotationsPage() {
   const [actionError, setActionError] = useState("")
   const [convertingId, setConvertingId] = useState<string | null>(null)
 
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === "object") {
+      const err = error as { response?: any; message?: string }
+      const data = err.response?.data
+      if (data) {
+        if (typeof data === "string") return data
+        if (data.detail) return String(data.detail)
+        if (data.message) return String(data.message)
+        if (data.error) return String(data.error)
+        if (Array.isArray(data)) return data.join(" ")
+        return JSON.stringify(data)
+      }
+      if (err.message) return String(err.message)
+    }
+    return fallback
+  }
+
   const load = useCallback(async () => {
     setLoading(true); setError("")
     try {
@@ -181,8 +198,8 @@ export default function QuotationsPage() {
           return
         }
       }
-    } catch {
-      setActionError(`Couldn't complete "${action}" for ${quotation.quotationNumber}. Please try again.`)
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, `Couldn't complete "${action}" for ${quotation.quotationNumber}. Please try again.`))
     } finally {
       setConvertingId(null)
     }

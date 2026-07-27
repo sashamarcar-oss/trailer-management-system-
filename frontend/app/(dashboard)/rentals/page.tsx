@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle, Download, Eye, FileText, MoreVertical, Pencil, Plus, Search,
-  Trash2, Ban, PlayCircle, PackageCheck,
+  Trash2, Ban, PlayCircle, PackageCheck, CheckCircle2, ReceiptText, CreditCard, CalendarPlus, Banknote, CircleDollarSign, Flag,
 } from "lucide-react"
 import { ModuleHeader } from "@/components/ui/ModuleHeader"
 import { Table, Column } from "@/components/ui/Table"
@@ -45,8 +45,19 @@ function ActionsMenu({ rental, onAction }: { rental: Rental; onAction: (action: 
     { key: "view", label: "View", icon: <Eye className="w-3.5 h-3.5" /> },
     ...(canEdit(rental.status) ? [{ key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> }] : []),
     { key: "agreement", label: "Download agreement", icon: <Download className="w-3.5 h-3.5" /> },
+    ...(rental.status === "Draft" ? [{ key: "confirm", label: "Confirm rental", icon: <CheckCircle2 className="w-3.5 h-3.5" /> }] : []),
+    ...(rental.status === "Reserved" ? [{ key: "deposit", label: "Record deposit", icon: <Banknote className="w-3.5 h-3.5" /> }] : []),
     ...(canActivate(rental.status) ? [{ key: "checkout", label: "Check out (activate)", icon: <PlayCircle className="w-3.5 h-3.5" /> }] : []),
+    ...(rental.status === "Active" ? [
+      { key: "extend", label: "Extend rental", icon: <CalendarPlus className="w-3.5 h-3.5" /> },
+      { key: "invoice", label: "Generate invoice", icon: <ReceiptText className="w-3.5 h-3.5" /> },
+      { key: "payment", label: "Record payment", icon: <CreditCard className="w-3.5 h-3.5" /> },
+    ] : []),
     ...(canMarkReturned(rental.status) ? [{ key: "return", label: "Process return", icon: <PackageCheck className="w-3.5 h-3.5" /> }] : []),
+    ...(rental.status === "Returned" ? [
+      { key: "refund", label: "Refund deposit", icon: <CircleDollarSign className="w-3.5 h-3.5" /> },
+      { key: "complete", label: "Complete rental", icon: <Flag className="w-3.5 h-3.5" /> },
+    ] : []),
     ...(canCancel(rental.status) ? [{ key: "cancel", label: "Cancel rental", icon: <Ban className="w-3.5 h-3.5" />, danger: true }] : []),
     ...(canDelete(rental.status) ? [{ key: "delete", label: "Delete", icon: <Trash2 className="w-3.5 h-3.5" />, danger: true }] : []),
   ]
@@ -91,6 +102,23 @@ export default function RentalsPage() {
   const [returning, setReturning] = useState<Rental | null>(null)
   const [actionError, setActionError] = useState("")
 
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === "object") {
+      const err = error as { response?: any; message?: string }
+      const data = err.response?.data
+      if (data) {
+        if (typeof data === "string") return data
+        if (data.detail) return String(data.detail)
+        if (data.message) return String(data.message)
+        if (data.error) return String(data.error)
+        if (Array.isArray(data)) return data.join(" ")
+        return JSON.stringify(data)
+      }
+      if (err.message) return String(err.message)
+    }
+    return fallback
+  }
+
   const load = useCallback(async () => {
     setLoading(true); setError("")
     try {
@@ -130,8 +158,37 @@ export default function RentalsPage() {
         case "view": setViewing(rental); return
         case "edit": setEditing(rental); setDialogOpen(true); return
         case "agreement": exportRentalAgreementPDF(rental); return
+        case "confirm": {
+          if (!window.confirm(`Confirm ${rental.rentalNumber} and reserve its trailer?`)) return
+          await rentalApi.confirm(rental.id); await load(); return
+        }
         case "checkout": setCheckingOut(rental); return
         case "return": setReturning(rental); return
+        case "extend": {
+          const returnDate = window.prompt(`Extend ${rental.rentalNumber}. New return date (YYYY-MM-DD):`, rental.scheduledReturnDate)
+          if (!returnDate) return
+          await rentalApi.extend(rental.id, returnDate); await load(); return
+        }
+        case "invoice": await rentalApi.generateInvoice(rental.id); await load(); return
+        case "payment": {
+          const amount = window.prompt(`Record payment for ${rental.rentalNumber}. Amount (KES):`)
+          if (!amount) return
+          await rentalApi.recordPayment(rental.id, Number(amount)); await load(); return
+        }
+        case "deposit": {
+          const amount = window.prompt(`Record security deposit for ${rental.rentalNumber}. Amount (KES):`)
+          if (!amount) return
+          await rentalApi.recordDeposit(rental.id, Number(amount)); await load(); return
+        }
+        case "refund": {
+          const amount = window.prompt(`Refund deposit for ${rental.rentalNumber}. Amount (KES):`)
+          if (!amount) return
+          await rentalApi.refundDeposit(rental.id, Number(amount)); await load(); return
+        }
+        case "complete": {
+          if (!window.confirm(`Complete ${rental.rentalNumber}? The invoice and deposit must already be settled.`)) return
+          await rentalApi.complete(rental.id); await load(); return
+        }
         case "cancel": {
           const reason = window.prompt(`Cancel ${rental.rentalNumber}? Optionally add a reason:`)
           if (reason === null) return
@@ -142,8 +199,8 @@ export default function RentalsPage() {
           await rentalApi.delete(rental.id); await load(); return
         }
       }
-    } catch {
-      setActionError(`Couldn't complete "${action}" for ${rental.rentalNumber}. Please try again.`)
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, `Couldn't complete "${action}" for ${rental.rentalNumber}. Please try again.`))
     }
   }
 

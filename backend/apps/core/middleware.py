@@ -40,14 +40,26 @@ class AuditLogMiddleware:
 
         if len(parts) >= 2 and parts[0] == "api":
             resource = parts[1]
-            model_name = resource.replace("-", " ").rstrip("s").title().replace(" ", "")
-            if len(parts) >= 3 and parts[2] and parts[2] != "":
-                object_id = parts[2]
+            if resource == "invoices" and len(parts) >= 3 and parts[2] == "payments":
+                model_name = "Payment"
+            else:
+                model_name = resource.replace("-", " ").rstrip("s").title().replace(" ", "")
+                if resource == "invoices" and len(parts) >= 3 and parts[2] and parts[2] != "":
+                    object_id = parts[2]
+                elif len(parts) >= 3 and parts[2] and parts[2] != "":
+                    object_id = parts[2]
 
         if not object_id:
             data = getattr(response, "data", None)
             if isinstance(data, dict):
                 object_id = str(data.get("id") or data.get("pk") or "")
+
+        if not object_id and request.path.startswith("/api/invoices/payments/") and hasattr(request, "data"):
+            data = request.data or {}
+            if isinstance(data, dict):
+                invoice_id = data.get("invoice")
+                if invoice_id:
+                    object_id = str(invoice_id)
 
         return model_name, object_id
 
@@ -57,4 +69,29 @@ class AuditLogMiddleware:
         }
         if request.method == "POST" and request.path.endswith("/login/"):
             metadata["login_email"] = request.data.get("email") if hasattr(request, "data") else None
+
+        if request.path.startswith("/api/invoices/"):
+            if hasattr(request, "data"):
+                data = request.data or {}
+                if isinstance(data, dict):
+                    if "status" in data:
+                        metadata["invoice_status"] = data.get("status")
+                    if "notes" in data:
+                        metadata["note"] = data.get("notes")
+                    if "client" in data:
+                        metadata["client_id"] = data.get("client")
+            if isinstance(getattr(response, "data", None), dict):
+                invoice_data = response.data or {}
+                if "invoice_number" in invoice_data:
+                    metadata["invoice_number"] = invoice_data.get("invoice_number")
+                if "status" in invoice_data:
+                    metadata["invoice_status"] = invoice_data.get("status")
+
+        if request.path.startswith("/api/invoices/payments/") and hasattr(request, "data"):
+            data = request.data or {}
+            if isinstance(data, dict):
+                metadata["payment_amount"] = data.get("amount")
+                metadata["payment_method"] = data.get("method")
+                metadata["payment_type"] = data.get("payment_type")
+                metadata["payment_reference"] = data.get("reference_number")
         return metadata

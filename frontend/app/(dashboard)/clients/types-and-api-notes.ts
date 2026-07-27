@@ -22,6 +22,13 @@
 
 export type ClientStatus = "Active" | "Inactive"
 
+export interface ClientDocument {
+  id: number
+  label: string
+  file: string
+  uploaded_at: string
+}
+
 export interface Client {
   id: string
   code: string
@@ -36,6 +43,8 @@ export interface Client {
   business_registration?: string
   national_id?: string
   passport?: string
+  currency?: "USD" | "KES"
+  documents?: ClientDocument[]
 
   status: ClientStatus
 
@@ -63,6 +72,12 @@ export interface ClientPayload {
   business_registration?: string
   national_id?: string
   passport?: string
+  currency?: "USD" | "KES"
+  drivers_license_file?: File | null
+  insurance_file?: File | null
+  dot_file?: File | null
+  signed_contract_file?: File | null
+  inspection_report_file?: File | null
   credit_limit: number
   payment_terms_days?: number
   notes?: string

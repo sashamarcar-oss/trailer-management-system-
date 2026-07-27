@@ -21,6 +21,10 @@ type BackendRental = {
   discount?: number | string
   tax?: number | string
   security_deposit?: number | string
+  deposit_received?: number | string
+  deposit_refunded?: number | string
+  deposit_forfeited?: number | string
+  deposit_notes?: string
   status: string
   total?: number | string
   created_at?: string
@@ -62,9 +66,9 @@ function mapRental(item: BackendRental): Rental {
     trailers: [{ id: `${item.id}-${item.trailer}`, trailerId: String(item.trailer), trailerName: item.trailer_number || `Trailer ${item.trailer}`, rate, rateUnit: "flat", quantity: 1 }],
     pickupDate: item.pickup_date, scheduledReturnDate: item.return_date, actualReturnDate: item.actual_return_date,
     pickupLocation: item.pickup_location, returnLocation: item.dropoff_location, deliveryRequired: Boolean(item.dropoff_location),
-    driverId: null, driverName: null, status: item.status === "completed" ? "Returned" : item.status === "cancelled" ? "Cancelled" : ["active", "overdue"].includes(item.status) ? "Active" : item.status === "reserved" ? "Reserved" : "Draft",
-    subtotal: total, total, depositAmount: numberValue(item.security_deposit), depositReturned: item.actual_return_date ? numberValue(item.security_deposit) : 0,
-    depositForfeited: 0, checkoutInspection: inspections.find((inspection) => inspection.stage === "pickup") ? mapInspection(inspections.find((inspection) => inspection.stage === "pickup") as BackendInspection) : null,
+    driverId: null, driverName: null, status: item.status === "completed" ? "Completed" : item.status === "returned" ? "Returned" : item.status === "cancelled" ? "Cancelled" : item.status === "active" ? "Active" : item.status === "reserved" ? "Reserved" : "Draft",
+    subtotal: total, total, depositAmount: numberValue(item.security_deposit), depositReturned: numberValue(item.deposit_refunded),
+    depositForfeited: numberValue(item.deposit_forfeited), depositNotes: item.deposit_notes, checkoutInspection: inspections.find((inspection) => inspection.stage === "pickup") ? mapInspection(inspections.find((inspection) => inspection.stage === "pickup") as BackendInspection) : null,
     returnInspection: inspections.find((inspection) => inspection.stage === "return") ? mapInspection(inspections.find((inspection) => inspection.stage === "return") as BackendInspection) : null,
     createdAt: item.created_at || "", updatedAt: item.updated_at || "",
   }
@@ -79,7 +83,7 @@ function toBackendPayload(payload: RentalPayload) {
     client: payload.clientId, trailer: trailer.trailerId, quotation: payload.quotationId,
     pickup_date: payload.pickupDate, return_date: payload.scheduledReturnDate,
     pickup_location: payload.pickupLocation || "", dropoff_location: payload.returnLocation || "",
-    rate: trailer.rate * units * trailer.quantity, security_deposit: payload.depositAmount, status: "draft",
+    rate: trailer.rate * units * trailer.quantity, security_deposit: payload.depositAmount,
   }
 }
 
@@ -100,17 +104,24 @@ export const rentalApi = {
   async create(payload: RentalPayload): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>("/rentals/", toBackendPayload(payload)); return mapRental(data) },
   async update(id: string, payload: RentalPayload): Promise<Rental> { const { data } = await axiosClient.patch<BackendRental>(`/rentals/${id}/`, toBackendPayload(payload)); return mapRental(data) },
   async delete(id: string): Promise<void> { await axiosClient.delete(`/rentals/${id}/`) },
-  async cancel(id: string, reason?: string): Promise<Rental> { const { data } = await axiosClient.patch<BackendRental>(`/rentals/${id}/`, { status: "cancelled" }); return mapRental(data) },
+  async confirm(id: string): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/confirm/`); return mapRental(data) },
+  async cancel(id: string, reason?: string): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/cancel/`, { reason }); return mapRental(data) },
   async activate(id: string, payload: ActivatePayload): Promise<Rental> {
-    const { data } = await axiosClient.patch<BackendRental>(`/rentals/${id}/`, { status: "active" })
-    await axiosClient.post(`/rentals/inspections/`, { rental: id, ...inspectionPayload({ ...payload.checkoutInspection, id: "", type: "checkout", inspectedAt: "" }, "pickup") })
+    const inspection = inspectionPayload({ ...payload.checkoutInspection, id: "", type: "checkout", inspectedAt: "" }, "pickup")
+    const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/dispatch/`, { inspection: { condition_notes: inspection.notes, checklist: inspection.checklist } })
     return mapRental(data)
   },
   async markReturned(id: string, payload: ReturnPayload): Promise<Rental> {
-    const { data } = await axiosClient.patch<BackendRental>(`/rentals/${id}/`, { status: "completed", actual_return_date: payload.actualReturnDate })
-    await axiosClient.post(`/rentals/inspections/`, { rental: id, ...inspectionPayload({ ...payload.returnInspection, id: "", type: "return", inspectedAt: "" }, "return") })
+    const inspection = inspectionPayload({ ...payload.returnInspection, id: "", type: "return", inspectedAt: "" }, "return")
+    const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/return/`, { actual_return_date: payload.actualReturnDate, deposit_refunded: payload.depositReturned, deposit_forfeited: payload.depositForfeited, deposit_notes: payload.depositNotes, inspection: { condition_notes: inspection.notes, checklist: inspection.checklist } })
     return mapRental(data)
   },
+  async extend(id: string, returnDate: string): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/extend/`, { return_date: returnDate }); return mapRental(data) },
+  async generateInvoice(id: string) { const { data } = await axiosClient.post(`/rentals/${id}/generate-invoice/`); return data },
+  async recordPayment(id: string, amount: number, method = "bank", referenceNumber = "") { const { data } = await axiosClient.post(`/rentals/${id}/record-payment/`, { amount, method, reference_number: referenceNumber }); return data },
+  async recordDeposit(id: string, amount: number, notes?: string): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/record-deposit/`, { amount, notes }); return mapRental(data) },
+  async refundDeposit(id: string, amount: number, notes?: string): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/refund-deposit/`, { amount, notes }); return mapRental(data) },
+  async complete(id: string): Promise<Rental> { const { data } = await axiosClient.post<BackendRental>(`/rentals/${id}/complete/`); return mapRental(data) },
   async checkAvailability(params: { trailerIds: string[]; pickupDate: string; returnDate: string; excludeRentalId?: string }): Promise<AvailabilityCheckResult[]> {
     const { data } = await axiosClient.get<{ results: BackendRental[] }>("/rentals/", { params: { trailer: params.trailerIds[0], pickup_after: params.pickupDate, return_before: params.returnDate } })
     const conflicts = data.results.filter((rental) => ["reserved", "active"].includes(rental.status) && String(rental.id) !== params.excludeRentalId)

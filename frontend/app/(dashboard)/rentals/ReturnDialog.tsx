@@ -35,7 +35,7 @@ export function ReturnDialog({
       setActualReturnDate(todayISO())
       setOdometerOrHours(""); setFuelLevel("Full"); setConditionNotes("")
       setDamageNoted(false); setDamageNotes("")
-      setDepositReturned(rental.depositAmount); setDepositForfeited(0); setDepositNotes("")
+      setDepositReturned(0); setDepositForfeited(0); setDepositNotes("")
       setError("")
     }
   }, [rental])

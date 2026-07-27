@@ -2,10 +2,10 @@ import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import type { Rental, RentalStatus, RentalTrailerLine } from "./types-and-api-notes"
 
-export const RENTAL_STATUSES: RentalStatus[] = ["Draft", "Reserved", "Active", "Returned", "Cancelled"]
+export const RENTAL_STATUSES: RentalStatus[] = ["Draft", "Reserved", "Active", "Returned", "Completed", "Cancelled"]
 
 export function kes(value: number): string {
-  return `KES ${Number(value || 0).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `USD ${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // ── Duration & pricing ────────────────────────────────────────────────────

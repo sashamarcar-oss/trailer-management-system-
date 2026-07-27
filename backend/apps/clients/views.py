@@ -1,6 +1,7 @@
 from django.db.models.deletion import ProtectedError
 from rest_framework import viewsets, permissions
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
 from .models import Client, ClientDocument, ClientNote
 from .serializers import ClientSerializer, ClientDocumentSerializer, ClientNoteSerializer
 from .filters import ClientFilter
@@ -10,6 +11,7 @@ class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.select_related("branch").prefetch_related("documents", "client_notes").all()
     serializer_class = ClientSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
     filterset_class = ClientFilter
     search_fields = ["name", "contact_person", "email", "contact_phone", "code"]
     ordering_fields = ["name", "created_at", "outstanding_balance", "credit_limit"]

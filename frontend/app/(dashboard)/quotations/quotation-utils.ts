@@ -8,18 +8,18 @@ export const QUOTATION_STATUSES: QuotationStatus[] = [
 ]
 
 export function kes(value: number): string {
-  return `KES ${Number(value || 0).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `USD ${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // ── Line item math ──────────────────────────────────────────────────────
-export function lineItemAmount(item: Pick<QuotationLineItem, "quantity" | "rate">): number {
+export function lineItemAmount(item: Pick<QuotationLineItem, "quantity" | "rate"> | { quantity: number | string; rate: number | string }): number {
   return Number(item.quantity || 0) * Number(item.rate || 0)
 }
 
 export function computeTotals(
-  lineItems: Pick<QuotationLineItem, "quantity" | "rate">[],
-  discountPercent: number,
-  vatPercent: number,
+  lineItems: Array<Pick<QuotationLineItem, "quantity" | "rate"> | { quantity: number | string; rate: number | string }>,
+  discountPercent: number | string,
+  vatPercent: number | string,
 ) {
   const subtotal = lineItems.reduce((sum, li) => sum + lineItemAmount(li), 0)
   const discountAmount = subtotal * (Number(discountPercent || 0) / 100)

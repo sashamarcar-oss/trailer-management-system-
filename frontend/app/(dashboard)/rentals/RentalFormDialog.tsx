@@ -210,9 +210,18 @@ export function RentalFormDialog({
               <select
                 value={clientId}
                 onChange={(e) => {
-                  const id = e.target.value; setClientId(id)
-                  const c = clients.find((cl) => cl.id === id)
-                  if (c) { setClientName(c.name); setClientEmail(c.email || ""); setClientPhone(c.phone || "") }
+                  const id = String(e.target.value)
+                  setClientId(id)
+                  const c = clients.find((cl) => String(cl.id) === id)
+                  if (c) {
+                    setClientName(c.name)
+                    setClientEmail(c.email || "")
+                    setClientPhone(c.phone || "")
+                  } else if (!id) {
+                    setClientName("")
+                    setClientEmail("")
+                    setClientPhone("")
+                  }
                 }}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm"
               >

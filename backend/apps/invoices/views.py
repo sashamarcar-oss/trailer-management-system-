@@ -1,11 +1,16 @@
-from rest_framework import viewsets, permissions
+from datetime import timedelta
+
+from django.utils import timezone
+from rest_framework import status, viewsets, permissions
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 from .models import Invoice, Payment
 from .serializers import InvoiceSerializer, PaymentSerializer
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
-    queryset = Invoice.objects.select_related("client", "rental").prefetch_related("items", "payments").all()
+    queryset = Invoice.objects.select_related("client", "rental", "quotation").prefetch_related("items", "payments").all()
     serializer_class = InvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
     filterset_fields = ["status", "client", "is_recurring"]
@@ -14,6 +19,38 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=["post"], url_path="create-rental")
+    def create_rental(self, request, pk=None):
+        from apps.rentals.models import Rental
+
+        invoice = self.get_object()
+        if invoice.rental:
+            return Response({"rental_id": invoice.rental.id}, status=status.HTTP_200_OK)
+        if invoice.status != "paid":
+            raise ValidationError("A rental can only be created from a fully paid invoice.")
+
+        item = invoice.items.first()
+        if not item or not item.trailer:
+            raise ValidationError({"items": "Invoice must include a trailer item with a linked trailer to create a rental."})
+
+        pickup_date = timezone.localdate()
+        duration_days = max(int(item.quantity or 1), 1)
+        return_date = pickup_date + timedelta(days=duration_days)
+
+        rental = Rental.objects.create(
+            client=invoice.client,
+            trailer=item.trailer,
+            quotation=invoice.quotation,
+            pickup_date=pickup_date,
+            return_date=return_date,
+            rate=item.unit_price,
+            status="draft",
+            created_by=request.user,
+        )
+        invoice.rental = rental
+        invoice.save(update_fields=["rental"])
+        return Response({"rental_id": rental.id}, status=status.HTTP_201_CREATED)
 
 
 class PaymentViewSet(viewsets.ModelViewSet):

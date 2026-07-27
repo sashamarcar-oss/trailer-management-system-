@@ -14,6 +14,7 @@ class Invoice(models.Model):
     client_email = models.EmailField(blank=True)
     client_phone = models.CharField(max_length=30, blank=True)
     rental = models.ForeignKey("rentals.Rental", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoices")
+    quotation = models.ForeignKey("quotations.Quotation", null=True, blank=True, on_delete=models.SET_NULL, related_name="invoices")
 
     invoice_date = models.DateField(auto_now_add=True)
     due_date = models.DateField()

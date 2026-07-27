@@ -5,7 +5,7 @@ class Rental(models.Model):
     TYPE_CHOICES = [("daily", "Daily"), ("weekly", "Weekly"), ("monthly", "Monthly"), ("long_term", "Long Term")]
     STATUS_CHOICES = [
         ("draft", "Draft"), ("reserved", "Reserved"), ("active", "Active"),
-        ("completed", "Completed"), ("cancelled", "Cancelled"), ("overdue", "Overdue"),
+        ("returned", "Returned"), ("completed", "Completed"), ("cancelled", "Cancelled"),
     ]
 
     rental_number = models.CharField(max_length=20, unique=True, editable=False)
@@ -31,6 +31,15 @@ class Rental(models.Model):
     damage_charges = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    confirmed_by = models.ForeignKey("users.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey("users.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    cancellation_reason = models.TextField(blank=True)
+    deposit_received = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    deposit_refunded = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    deposit_forfeited = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    deposit_notes = models.TextField(blank=True)
     agreement_signed = models.BooleanField(default=False)
     agreement_file = models.FileField(upload_to="rentals/agreements/", null=True, blank=True)
     signature_file = models.FileField(upload_to="rentals/signatures/", null=True, blank=True)
@@ -53,7 +62,7 @@ class Rental(models.Model):
         if self.status == "active":
             self.trailer.status = "rented"
             self.trailer.save(update_fields=["status"])
-        elif self.status in ("completed", "cancelled") and self.trailer.status == "rented":
+        elif self.status in ("returned", "completed", "cancelled") and self.trailer.status in ("rented", "reserved"):
             self.trailer.status = "available"
             self.trailer.save(update_fields=["status"])
 

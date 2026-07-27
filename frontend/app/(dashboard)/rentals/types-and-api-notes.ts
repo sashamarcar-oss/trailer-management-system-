@@ -21,7 +21,7 @@
 
 // ── Add/merge into @/types ──────────────────────────────────────────────
 
-export type RentalStatus = "Draft" | "Reserved" | "Active" | "Returned" | "Cancelled"
+export type RentalStatus = "Draft" | "Reserved" | "Active" | "Returned" | "Completed" | "Cancelled"
 // "Overdue" is derived (Active + past scheduledReturnDate), not a stored status —
 // see isOverdue() in rental-utils.ts. Store the real status as one of the above.
 

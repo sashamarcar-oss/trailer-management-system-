@@ -120,7 +120,7 @@ export function ExpenseForm({ open, onOpenChange, editing, onSaved }: ExpenseFor
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="amount">Amount (KES)</Label>
+              <Label htmlFor="amount">Amount (USD)</Label>
               <Input id="amount" type="number" placeholder="45000" {...register("amount", { valueAsNumber: true })} />
               {errors.amount && <p className="text-xs text-red-600 mt-1">{errors.amount.message}</p>}
             </div>

@@ -1,6 +1,13 @@
 import { axiosClient } from "@/lib/api"
 import type { Client, ClientPayload, ClientStatus, Paginated, StatementLine } from "./types-and-api-notes"
 
+type BackendClientDocument = {
+  id: number
+  label: string
+  file: string
+  uploaded_at: string
+}
+
 type BackendClient = {
   id: number | string
   code: string
@@ -22,6 +29,8 @@ type BackendClient = {
   national_id?: string
   passport?: string
   business_registration?: string
+  currency?: "USD" | "KES"
+  documents?: BackendClientDocument[]
 }
 
 type BackendInvoice = {
@@ -54,6 +63,13 @@ function mapClient(item: BackendClient): Client {
     payment_terms_days: terms === "cash" ? 0 : Number(terms || 30), rating: numberValue(item.rating), notes: item.notes,
     kra_pin: item.kra_pin, business_registration: item.business_registration,
     national_id: item.national_id, passport: item.passport,
+    currency: item.currency || "USD",
+    documents: item.documents?.map((document) => ({
+      id: document.id,
+      label: document.label,
+      file: document.file,
+      uploaded_at: document.uploaded_at,
+    })),
     createdAt: item.created_at || "", updatedAt: item.updated_at || "",
   }
 }
@@ -61,14 +77,46 @@ function mapClient(item: BackendClient): Client {
 function toBackendPayload(payload: ClientPayload) {
   const type = payload.client_type.toLowerCase()
   const paymentTerms = payload.payment_terms_days ? `net_${payload.payment_terms_days}` : "cash"
-  return {
-    name: payload.name, client_type: type, contact_person: payload.secondary_contact_name || "",
-    contact_phone: payload.contact_phone, email: payload.contact_email,
-    address: payload.address || "", city: "", country: "Kenya", credit_limit: payload.credit_limit,
-    preferred_payment_terms: paymentTerms, notes: payload.notes || "",
-    kra_pin: payload.kra_pin || "", business_registration: payload.business_registration || "",
-    national_id: payload.national_id || "", passport: payload.passport || "",
+  const body = {
+    name: payload.name,
+    client_type: type,
+    contact_person: payload.secondary_contact_name || "",
+    contact_phone: payload.contact_phone,
+    email: payload.contact_email,
+    address: payload.address || "",
+    city: "",
+    country: "Kenya",
+    currency: payload.currency || "USD",
+    credit_limit: payload.credit_limit,
+    preferred_payment_terms: paymentTerms,
+    notes: payload.notes || "",
+    kra_pin: payload.kra_pin || "",
+    business_registration: payload.business_registration || "",
+    national_id: payload.national_id || "",
+    passport: payload.passport || "",
   }
+
+  const hasFiles = Boolean(
+    payload.drivers_license_file || payload.insurance_file || payload.dot_file ||
+    payload.signed_contract_file || payload.inspection_report_file
+  )
+
+  if (!hasFiles) return body
+
+  const formData = new FormData()
+  Object.entries(body).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value))
+    }
+  })
+
+  if (payload.drivers_license_file) formData.append("drivers_license_file", payload.drivers_license_file)
+  if (payload.insurance_file) formData.append("insurance_file", payload.insurance_file)
+  if (payload.dot_file) formData.append("dot_file", payload.dot_file)
+  if (payload.signed_contract_file) formData.append("signed_contract_file", payload.signed_contract_file)
+  if (payload.inspection_report_file) formData.append("inspection_report_file", payload.inspection_report_file)
+
+  return formData
 }
 
 export const clientApi = {
@@ -84,8 +132,18 @@ export const clientApi = {
     return { ...data, results }
   },
   async retrieve(id: string): Promise<Client> { const { data } = await axiosClient.get<BackendClient>(`/clients/${id}/`); return mapClient(data) },
-  async create(payload: ClientPayload): Promise<Client> { const { data } = await axiosClient.post<BackendClient>("/clients/", toBackendPayload(payload)); return mapClient(data) },
-  async update(id: string, payload: ClientPayload): Promise<Client> { const { data } = await axiosClient.patch<BackendClient>(`/clients/${id}/`, toBackendPayload(payload)); return mapClient(data) },
+  async create(payload: ClientPayload): Promise<Client> {
+    const body = toBackendPayload(payload)
+    const config = body instanceof FormData ? { headers: { "Content-Type": undefined } } : undefined
+    const { data } = await axiosClient.post<BackendClient>("/clients/", body, config)
+    return mapClient(data)
+  },
+  async update(id: string, payload: ClientPayload): Promise<Client> {
+    const body = toBackendPayload(payload)
+    const config = body instanceof FormData ? { headers: { "Content-Type": undefined } } : undefined
+    const { data } = await axiosClient.patch<BackendClient>(`/clients/${id}/`, body, config)
+    return mapClient(data)
+  },
   async setStatus(id: string, status: ClientStatus): Promise<Client> { const { data } = await axiosClient.patch<BackendClient>(`/clients/${id}/`, { blacklisted: status === "Inactive" }); return mapClient(data) },
   async delete(id: string): Promise<void> { await axiosClient.delete(`/clients/${id}/`) },
   async getStatement(id: string): Promise<StatementLine[]> {

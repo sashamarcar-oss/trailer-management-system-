@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Truck, Users, ClipboardList, FileText, Receipt,
-  Wallet, BarChart3, Menu, ShieldCheck,
+  Wallet, BarChart3, Menu, ShieldCheck, Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -13,12 +13,13 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/trailers", label: "Trailers", icon: Truck },
   { href: "/clients", label: "Clients", icon: Users },
-  { href: "/rentals", label: "Rentals", icon: ClipboardList },
   { href: "/quotations", label: "Quotations", icon: FileText },
   { href: "/invoices", label: "Invoices", icon: Receipt },
+  { href: "/rentals", label: "Rentals", icon: ClipboardList },
   { href: "/expenses", label: "Expenses", icon: Wallet },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { key: "audit-logs", href: "/audit-logs", label: "Audit logs", icon: ShieldCheck },
+  { href: "/settings/admin-users", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar() {

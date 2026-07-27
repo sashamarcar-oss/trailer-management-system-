@@ -10,7 +10,7 @@ import { Table, Column } from "@/components/ui/Table"
 import type { Client, ClientPayload, ClientStatus, Paginated, StatementLine } from "./types-and-api-notes"
 import { clientApi } from "./client-api"
 import {
-  availableCredit, creditUtilizationPercent, exportClientStatementPDF, exportClientsCSV, isOverLimit, kes,
+  availableCredit, creditUtilizationPercent, exportClientStatementPDF, exportClientsCSV, formatCurrency, isOverLimit, kes,
 } from "./client-utils"
 import { ClientFormDialog } from "./ClientFormDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
@@ -170,16 +170,16 @@ export default function ClientsPage() {
     { key: "contact_phone", label: "Contact" },
     {
       key: "outstanding_balance", label: "Outstanding",
-      render: (r) => <span className={isOverLimit(r) ? "text-red-600 font-semibold" : ""}>{kes(r.outstanding_balance)}</span>,
+      render: (r) => <span className={isOverLimit(r) ? "text-red-600 font-semibold" : ""}>{formatCurrency(r.outstanding_balance, r.currency || "USD")}</span>,
     },
     {
       key: "credit_limit", label: "Credit Limit / Available",
       render: (r) => (
         <div className="min-w-32">
           <div className="flex justify-between text-xs">
-            <span>{kes(r.credit_limit)}</span>
+            <span>{formatCurrency(r.credit_limit, r.currency || "USD")}</span>
             <span className={availableCredit(r) < 0 ? "text-red-600 font-semibold" : "text-muted-foreground"}>
-              {availableCredit(r) < 0 ? `${kes(Math.abs(availableCredit(r)))} over` : `${kes(availableCredit(r))} free`}
+              {availableCredit(r) < 0 ? `${formatCurrency(Math.abs(availableCredit(r)), r.currency || "USD")} over` : `${formatCurrency(availableCredit(r), r.currency || "USD")} free`}
             </span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
@@ -289,7 +289,34 @@ export default function ClientsPage() {
       )}
 
       <ClientFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
-      <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.name || "Client profile"} description={viewing ? `${viewing.code} · ${viewing.client_type}` : undefined} fields={viewing ? [{ label: "Status", value: viewing.status }, { label: "Phone", value: viewing.contact_phone }, { label: "Email", value: viewing.contact_email }, { label: "Address", value: viewing.address }, { label: "Credit limit", value: kes(viewing.credit_limit) }, { label: "Outstanding", value: kes(viewing.outstanding_balance) }, { label: "Payment terms", value: `${viewing.payment_terms_days} days` }, { label: "Notes", value: viewing.notes }] : []} />
+      <DetailsDialog
+        open={Boolean(viewing)}
+        onOpenChange={(open) => !open && setViewing(null)}
+        title={viewing?.name || "Client profile"}
+        description={viewing ? `${viewing.code} · ${viewing.client_type}` : undefined}
+        fields={viewing ? [
+          { label: "Status", value: viewing.status },
+          { label: "Phone", value: viewing.contact_phone },
+          { label: "Email", value: viewing.contact_email },
+          { label: "Address", value: viewing.address },
+          { label: "Currency", value: viewing.currency || "USD" },
+          { label: "Credit limit", value: formatCurrency(viewing.credit_limit, viewing.currency || "USD") },
+          { label: "Outstanding", value: formatCurrency(viewing.outstanding_balance, viewing.currency || "USD") },
+          { label: "Payment terms", value: `${viewing.payment_terms_days} days` },
+          { label: "Documents", value: viewing.documents?.length ? (
+            <ul className="space-y-1 text-sm">
+              {viewing.documents.map((document) => (
+                <li key={document.id}>
+                  <a href={document.file} target="_blank" rel="noreferrer" className="text-teal-700 hover:underline">
+                    {document.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : "No documents uploaded" },
+          { label: "Notes", value: viewing.notes },
+        ] : []}
+      />
     </div>
   )
 }

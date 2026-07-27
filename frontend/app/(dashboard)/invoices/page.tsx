@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-  AlertCircle, Copy, Download, Eye, FileText, MoreVertical,
-  Pencil, Plus, Search, Send, Trash2, Ban, Wallet, Bell,
+  AlertCircle, CheckCircle2, Copy, Download, Eye, FileText, MoreVertical,
+  Pencil, Plus, Search, Send, Trash2, Ban, Wallet, Bell, History, Printer,
 } from "lucide-react"
 import { ModuleHeader } from "@/components/ui/ModuleHeader"
 import { Table, Column } from "@/components/ui/Table"
@@ -11,12 +11,14 @@ import { Badge } from "@/components/ui/badge"
 import type { Invoice, InvoicePayload, InvoiceStatus, Paginated } from "./types-and-api-notes"
 import { invoiceApi } from "./invoice-api"
 import {
-  INVOICE_STATUSES, canDelete, canEdit, canRecordPayment, canRefund, canRemind, canSend, canVoid,
-  computeAgingSummary, daysOverdue, exportInvoicePDF, exportInvoicesCSV, isOverdue, kes,
+  INVOICE_STATUSES, canDelete, canEdit, canRecordPayment, canRefund, canRemind, canResend, canSend,
+  canViewPaymentHistory, canVoid, computeAgingSummary, daysOverdue, exportInvoicePDF, exportInvoicesCSV,
+  isOverdue, kes,
 } from "./invoice-utils"
 import { InvoiceFormDialog } from "./InvoiceFormDialog"
 import { RecordPaymentDialog } from "./RecordPaymentDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
+import { PaymentHistoryDialog } from "./PaymentHistoryDialog"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -45,11 +47,14 @@ function ActionsMenu({ invoice, onAction }: { invoice: Invoice; onAction: (actio
     ...(canEdit(invoice.status) ? [{ key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> }] : []),
     { key: "duplicate", label: "Duplicate", icon: <Copy className="w-3.5 h-3.5" /> },
     { key: "pdf", label: "Download PDF", icon: <Download className="w-3.5 h-3.5" /> },
-    ...(canSend(invoice.status) ? [{ key: "send", label: "Send to client", icon: <Send className="w-3.5 h-3.5" /> }] : []),
+    { key: "print", label: "Print invoice", icon: <Printer className="w-3.5 h-3.5" /> },
+    ...(canSend(invoice.status) ? [{ key: "send", label: "Send invoice", icon: <Send className="w-3.5 h-3.5" /> }] : []),
+    ...(canResend(invoice.status) ? [{ key: "resend", label: "Resend invoice", icon: <Send className="w-3.5 h-3.5" /> }] : []),
     ...(canRecordPayment(invoice) ? [{ key: "payment", label: "Record payment", icon: <Wallet className="w-3.5 h-3.5" /> }] : []),
+    ...(canViewPaymentHistory(invoice) ? [{ key: "history", label: "Payment history", icon: <History className="w-3.5 h-3.5" /> }] : []),
     ...(canRefund(invoice) ? [{ key: "refund", label: "Refund", icon: <Wallet className="w-3.5 h-3.5" /> }] : []),
     ...(canRemind(invoice) ? [{ key: "remind", label: "Send reminder", icon: <Bell className="w-3.5 h-3.5" /> }] : []),
-    ...(canVoid(invoice.status) ? [{ key: "void", label: "Void invoice", icon: <Ban className="w-3.5 h-3.5" />, danger: true }] : []),
+    ...(canVoid(invoice) ? [{ key: "void", label: "Void invoice", icon: <Ban className="w-3.5 h-3.5" />, danger: true }] : []),
     ...(canDelete(invoice.status) ? [{ key: "delete", label: "Delete", icon: <Trash2 className="w-3.5 h-3.5" />, danger: true }] : []),
   ]
 
@@ -92,7 +97,11 @@ export default function InvoicesPage() {
   const [viewing, setViewing] = useState<Invoice | null>(null)
   const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null)
   const [refundingInvoice, setRefundingInvoice] = useState<Invoice | null>(null)
+  const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null)
   const [actionError, setActionError] = useState("")
+  const [infoMessage, setInfoMessage] = useState("")
+  const [paidInvoice, setPaidInvoice] = useState<Invoice | null>(null)
+  const [creatingRental, setCreatingRental] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setError("")
@@ -110,6 +119,7 @@ export default function InvoicesPage() {
     } catch {
       setError("Unable to load invoices. Please try again.")
       setRows([]); setCount(0)
+      setInfoMessage("")
     } finally {
       setLoading(false)
     }
@@ -128,13 +138,54 @@ export default function InvoicesPage() {
 
   async function handleAction(invoice: Invoice, action: string) {
     setActionError("")
+    setInfoMessage("")
     try {
       switch (action) {
         case "view": setViewing(invoice); return
         case "edit": setEditing(invoice); setDialogOpen(true); return
         case "pdf": exportInvoicePDF(invoice); return
+        case "print": {
+          const printWindow = window.open("", "_blank", "width=800,height=900")
+          if (!printWindow) {
+            setActionError("Your browser blocked the print window. Please allow pop-ups and try again.")
+            return
+          }
+
+          const content = `
+            <html>
+              <head><title>${invoice.invoiceNumber}</title></head>
+              <body style="font-family: Arial, sans-serif; padding: 24px; color: #111827;">
+                <h2 style="margin-bottom: 8px;">${invoice.invoiceNumber}</h2>
+                <p style="margin: 0 0 6px;">Client: ${invoice.clientName}</p>
+                <p style="margin: 0 0 6px;">Date: ${invoice.date}</p>
+                <p style="margin: 0 0 16px;">Due: ${invoice.dueDate}</p>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+                  <thead>
+                    <tr style="background: #f3f4f6;">
+                      <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Description</th>
+                      <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Qty</th>
+                      <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${invoice.lineItems.map((item) => `<tr><td style="border: 1px solid #d1d5db; padding: 8px;">${item.description}</td><td style="border: 1px solid #d1d5db; padding: 8px;">${item.quantity}</td><td style="border: 1px solid #d1d5db; padding: 8px;">USD ${item.amount.toLocaleString("en-US")}</td></tr>`).join("")}
+                  </tbody>
+                </table>
+                <p style="margin: 0 0 8px;"><strong>Total:</strong> USD ${invoice.total.toLocaleString("en-US")}</p>
+                <p style="margin: 0 0 8px;"><strong>Paid:</strong> USD ${invoice.amountPaid.toLocaleString("en-US")}</p>
+                <p style="margin: 0;"><strong>Balance:</strong> USD ${invoice.balance.toLocaleString("en-US")}</p>
+              </body>
+            </html>
+          `
+          printWindow.document.write(content)
+          printWindow.document.close()
+          printWindow.focus()
+          printWindow.print()
+          return
+        }
         case "payment": setPayingInvoice(invoice); return
         case "refund": setRefundingInvoice(invoice); return
+        case "history": setHistoryInvoice(invoice); return
         case "duplicate": await invoiceApi.create({
           clientId: invoice.clientId, clientName: invoice.clientName, clientEmail: invoice.clientEmail,
           clientPhone: invoice.clientPhone, date: new Date().toISOString().slice(0, 10), dueDate: invoice.dueDate,
@@ -142,6 +193,7 @@ export default function InvoicesPage() {
           discountPercent: invoice.discountPercent, vatPercent: invoice.vatPercent, notes: invoice.notes, terms: invoice.terms,
         }); await load(); return
         case "send": await invoiceApi.send(invoice.id); await load(); return
+        case "resend": await invoiceApi.send(invoice.id); await load(); return
         case "remind": await invoiceApi.sendReminder(invoice.id); return
         case "void": {
           const reason = window.prompt(`Void ${invoice.invoiceNumber}? Optionally add a reason:`)
@@ -162,6 +214,13 @@ export default function InvoicesPage() {
     if (editing) await invoiceApi.update(editing.id, payload)
     else await invoiceApi.create(payload)
     await load()
+  }
+
+  async function handlePaymentRecorded(invoice?: Invoice) {
+    await load()
+    if (invoice?.status === "Paid") {
+      setPaidInvoice(invoice)
+    }
   }
 
   const columns: Column<Invoice>[] = [
@@ -255,6 +314,11 @@ export default function InvoicesPage() {
           <AlertCircle className="w-4 h-4 shrink-0" /> {actionError}
         </div>
       )}
+      {infoMessage && (
+        <div className="mt-3 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm border border-emerald-200">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> {infoMessage}
+        </div>
+      )}
 
       {error ? (
         <div className="mt-6 flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -294,8 +358,59 @@ export default function InvoicesPage() {
       )}
 
       <InvoiceFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
-      <RecordPaymentDialog invoice={payingInvoice} onClose={() => setPayingInvoice(null)} onRecorded={load} />
+      <RecordPaymentDialog invoice={payingInvoice} onClose={() => setPayingInvoice(null)} onRecorded={handlePaymentRecorded} />
       <RecordPaymentDialog invoice={refundingInvoice} mode="refund" onClose={() => setRefundingInvoice(null)} onRecorded={load} />
+      <PaymentHistoryDialog invoice={historyInvoice} open={Boolean(historyInvoice)} onOpenChange={(open) => !open && setHistoryInvoice(null)} />
+      <RecordPaymentDialog invoice={payingInvoice} onClose={() => setPayingInvoice(null)} onRecorded={handlePaymentRecorded} />
+      <RecordPaymentDialog invoice={refundingInvoice} mode="refund" onClose={() => setRefundingInvoice(null)} onRecorded={load} />
+      {paidInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card border border-border shadow-xl">
+            <div className="px-6 py-5">
+              <h2 className="text-lg font-semibold text-foreground">Payment received successfully</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Would you like to create a Rental from this paid invoice?</p>
+              <div className="mt-4 rounded-xl border border-border bg-muted p-4 text-sm">
+                <p className="font-semibold">{paidInvoice.invoiceNumber}</p>
+                <p>{paidInvoice.clientName}</p>
+                <p className="text-muted-foreground">Balance cleared: {kes(paidInvoice.balance)}</p>
+              </div>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPaidInvoice(null)}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg border border-input text-sm font-medium hover:bg-accent"
+                  disabled={creatingRental}
+                >
+                  Later
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setCreatingRental(true)
+                    setActionError("")
+                    setInfoMessage("")
+                    try {
+                      const rentalId = await invoiceApi.createRental(paidInvoice.id)
+                      setInfoMessage(`Rental ${rentalId} created from ${paidInvoice.invoiceNumber}.`)
+                      await load()
+                    } catch (error) {
+                      setActionError("Unable to create rental from this invoice. Please try again.")
+                    } finally {
+                      setCreatingRental(false)
+                      setPaidInvoice(null)
+                    }
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-teal-700 text-white text-sm font-medium hover:bg-teal-800 disabled:opacity-60"
+                  disabled={creatingRental}
+                >
+                  {creatingRental ? "Creating…" : "Create Rental"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      <PaymentHistoryDialog invoice={historyInvoice} open={Boolean(historyInvoice)} onOpenChange={(open) => !open && setHistoryInvoice(null)} />
       <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.invoiceNumber || "Invoice details"} description={viewing?.clientName} fields={viewing ? [{ label: "Status", value: viewing.status }, { label: "Invoice date", value: viewing.date }, { label: "Due date", value: viewing.dueDate }, { label: "Total", value: kes(viewing.total) }, { label: "Paid", value: kes(viewing.amountPaid) }, { label: "Balance", value: kes(viewing.balance) }, { label: "Items", value: viewing.lineItems.map((item) => `${item.description} × ${item.quantity} — ${kes(item.amount)}`).join("; ") }, { label: "Notes", value: viewing.notes }] : []} />
     </div>
   )

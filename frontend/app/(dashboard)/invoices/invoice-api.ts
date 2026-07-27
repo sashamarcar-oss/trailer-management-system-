@@ -100,6 +100,10 @@ export const invoiceApi = {
     const { data } = await axiosClient.patch<BackendInvoice>(`/invoices/${id}/`, { status: "cancelled", notes: reason || "" })
     return mapInvoice(data)
   },
+  async createRental(id: string): Promise<string> {
+    const { data } = await axiosClient.post<{ rental_id: number | string }>(`/invoices/${id}/create-rental/`)
+    return String(data.rental_id)
+  },
   async updateStatus(id: string, status: string): Promise<Invoice> {
     const { data } = await axiosClient.patch<BackendInvoice>(`/invoices/${id}/`, { status })
     return mapInvoice(data)

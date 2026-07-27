@@ -158,9 +158,12 @@ export const quotationApi = {
     return mapQuotation(data)
   },
 
-  async convert(id: string): Promise<{ rentalId?: string }> {
-    const { data } = await axiosClient.post<{ rental_id?: string; rentalId?: string }>(`/quotations/${id}/convert_to_rental/`)
-    return { rentalId: data.rentalId || data.rental_id }
+  async convertToInvoice(id: string): Promise<{ invoiceId?: string; invoiceNumber?: string }> {
+    const { data } = await axiosClient.post<Record<string, unknown>>(`/quotations/${id}/convert_to_invoice/`)
+    return {
+      invoiceId: data?.id == null ? undefined : String(data.id),
+      invoiceNumber: typeof data?.invoice_number === "string" ? data.invoice_number : undefined,
+    }
   },
 
   async get(id: string): Promise<Quotation> {

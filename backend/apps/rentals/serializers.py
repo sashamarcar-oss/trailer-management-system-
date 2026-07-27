@@ -19,7 +19,11 @@ class RentalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rental
         fields = "__all__"
-        read_only_fields = ["rental_number", "created_by", "created_at", "updated_at"]
+        read_only_fields = [
+            "rental_number", "created_by", "created_at", "updated_at", "status",
+            "actual_return_date", "confirmed_at", "confirmed_by", "cancelled_at", "cancelled_by",
+            "cancellation_reason", "deposit_received", "deposit_refunded", "deposit_forfeited", "deposit_notes",
+        ]
 
     def get_total(self, obj):
         return (
@@ -28,6 +32,8 @@ class RentalSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        if self.instance and "status" in attrs and attrs["status"] != self.instance.status:
+            raise serializers.ValidationError({"status": "Use the rental lifecycle actions to change status."})
         trailer = attrs.get("trailer", getattr(self.instance, "trailer", None))
         pickup = attrs.get("pickup_date", getattr(self.instance, "pickup_date", None))
         ret = attrs.get("return_date", getattr(self.instance, "return_date", None))

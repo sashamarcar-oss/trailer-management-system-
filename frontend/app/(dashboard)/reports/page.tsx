@@ -64,8 +64,8 @@ const EXPENSE_CATEGORIES = ["Fuel", "Repairs", "Insurance", "Permits & Licensing
 const AGING_BUCKET_COLORS = ["#0F6E56", "#F59E0B", "#F97316", "#EF4444", "#B91C1C"]
 
 // ─── Currency / date helpers ────────────────────────────────────────────────
-const ksh = (v: number) => `Ksh ${v.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const fmtKsh = (v: unknown) => ksh(typeof v === "number" ? v : 0)
+const usd = (v: number) => `USD ${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const fmtUsd = (v: unknown) => usd(typeof v === "number" ? v : 0)
 const fmtCount = (v: unknown) => `${typeof v === "number" ? v : 0}`
 
 function parseDate(d: unknown): Date {
@@ -963,7 +963,7 @@ function TrailerReportsPageContent() {
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
-                      <StatCard label="Pending Value" value={ksh(quotationTotals.pendingValue)} valueClass="text-amber-600" sub={`${pendingQuotations.length} open`} icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
+                      <StatCard label="Pending Value" value={usd(quotationTotals.pendingValue)} valueClass="text-amber-600" sub={`${pendingQuotations.length} open`} icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
                       <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" sub="sent → converted" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
                       <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" sub="within 7 days" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
@@ -975,7 +975,7 @@ function TrailerReportsPageContent() {
                         <span className="font-medium">{safeStr(q.client_name || q.client) || "—"}</span>,
                         <span className="text-muted-foreground whitespace-nowrap">{safeStr(q.issue_date || q.created_at) || "—"}</span>,
                         <span className={isQuotationExpiringSoon(q) ? "text-amber-600 font-semibold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{safeStr(q.expiry_date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(quotationAmount(q))}</span>,
+                        <span className="font-semibold">{usd(quotationAmount(q))}</span>,
                         <StatusBadge status={quotationStatus(q)} />,
                         <Link href={`/quotations/${safeStr(q.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
@@ -994,7 +994,7 @@ function TrailerReportsPageContent() {
                         <span className="font-medium">{safeStr(q.client_name || q.client) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(q.issue_date || q.created_at) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(q.expiry_date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(quotationAmount(q))}</span>,
+                        <span className="font-semibold">{usd(quotationAmount(q))}</span>,
                         <StatusBadge status={quotationStatus(q)} />,
                       ])}
                     />
@@ -1017,7 +1017,7 @@ function TrailerReportsPageContent() {
                           <span className="font-mono">{safeStr(q.quotation_number || q.number || q.id)}</span>,
                           <span className="font-medium">{safeStr(q.client_name || q.client) || "—"}</span>,
                           <span className="font-semibold text-amber-600">{safeStr(q.expiry_date) || "—"}</span>,
-                          <span className="font-semibold">{ksh(quotationAmount(q))}</span>,
+                          <span className="font-semibold">{usd(quotationAmount(q))}</span>,
                           <StatusBadge status={quotationStatus(q)} />,
                         ])}
                       />
@@ -1053,7 +1053,7 @@ function TrailerReportsPageContent() {
                       <StatCard label="Total Rentals" value={String(rentalTotals.total)} valueClass="text-blue-600" icon={<PackageCheck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Active Rentals" value={String(rentalTotals.active)} valueClass="text-teal-700" icon={<Truck className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
                       <StatCard label="Overdue Returns" value={String(rentalTotals.overdue)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
-                      <StatCard label="Billed Revenue" value={ksh(rentalTotals.billedRevenue)} valueClass="text-purple-600" sub="what rentals charged, not necessarily collected" icon={<DollarSign className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-100" />
+                      <StatCard label="Billed Revenue" value={usd(rentalTotals.billedRevenue)} valueClass="text-purple-600" sub="what rentals charged, not necessarily collected" icon={<DollarSign className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-100" />
                     </div>
                     <DataTable
                       headers={["RENTAL ID", "TRAILER(S)", "CLIENT", "START DATE", "END DATE", "TOTAL", "STATUS", "ACTIONS"]}
@@ -1064,7 +1064,7 @@ function TrailerReportsPageContent() {
                         <span className="text-muted-foreground">{safeStr(r.client_name || r.client) || "—"}</span>,
                         <span className="text-muted-foreground whitespace-nowrap">{safeStr(r.start_date) || "—"}</span>,
                         <span className="text-muted-foreground whitespace-nowrap">{safeStr(r.end_date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(Number(r.total_amount ?? r.total ?? r.amount) || 0)}</span>,
+                        <span className="font-semibold">{usd(Number(r.total_amount ?? r.total ?? r.amount) || 0)}</span>,
                         <StatusBadge status={safeStr(r.status) || "Active"} />,
                         <button className="p-1.5 rounded hover:bg-muted text-muted-foreground"><Eye className="w-4 h-4" /></button>,
                       ])}
@@ -1160,7 +1160,7 @@ function TrailerReportsPageContent() {
                         <span className="text-muted-foreground">{safeStr(t.plate_number) || "—"}</span>,
                         <StatusBadge status={safeStr(t.status) || "Available"} />,
                         <span className="text-muted-foreground">{safeStr(t.purchase_date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(Number(t.purchase_price) || 0)}</span>,
+                        <span className="font-semibold">{usd(Number(t.purchase_price) || 0)}</span>,
                         <Link href={`/fleet/trailers/${safeStr(t.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
@@ -1196,7 +1196,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                       <StatCard label="Scheduled" value={String(maintenanceTotals.scheduled)} valueClass="text-amber-600" />
                       <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-teal-700" />
-                      <StatCard label="Total Cost" value={ksh(maintenanceTotals.totalCost)} valueClass="text-red-600" />
+                      <StatCard label="Total Cost" value={usd(maintenanceTotals.totalCost)} valueClass="text-red-600" />
                     </div>
                     <DataTable
                       headers={["TRAILER", "TYPE", "DATE", "COST", "STATUS", "NEXT SERVICE"]}
@@ -1205,7 +1205,7 @@ function TrailerReportsPageContent() {
                         <span className="font-medium">{safeStr(m.trailer_name || m.trailer) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(m.type) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(m.date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(Number(m.cost) || 0)}</span>,
+                        <span className="font-semibold">{usd(Number(m.cost) || 0)}</span>,
                         <StatusBadge status={safeStr(m.status) || "Scheduled"} />,
                         <span className="text-muted-foreground">{safeStr(m.next_service_date) || "—"}</span>,
                       ])}
@@ -1234,7 +1234,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <StatCard label="Total Clients" value={String(clientTotals.total)} valueClass="text-blue-600" />
                       <StatCard label="Clients with Balance" value={String(clientTotals.withBalance)} valueClass="text-amber-600" />
-                      <StatCard label="Total Outstanding" value={ksh(clientTotals.outstanding)} valueClass="text-red-600" />
+                      <StatCard label="Total Outstanding" value={usd(clientTotals.outstanding)} valueClass="text-red-600" />
                     </div>
                     <DataTable
                       headers={["CLIENT", "TOTAL RENTALS", "TOTAL SPEND", "OUTSTANDING BALANCE", "ACTIONS"]}
@@ -1242,8 +1242,8 @@ function TrailerReportsPageContent() {
                       rows={filteredClients.slice(0, 30).map((c) => [
                         <span className="font-medium">{safeStr(c.name || c.company_name) || "—"}</span>,
                         <span>{Number(c.total_rentals ?? c.rentals_count) || 0}</span>,
-                        <span className="font-semibold text-teal-700">{ksh(Number(c.total_spend ?? c.lifetime_value) || 0)}</span>,
-                        <span className={Number(c.outstanding_balance) > 0 ? "font-semibold text-red-600" : "text-muted-foreground"}>{ksh(Number(c.outstanding_balance) || 0)}</span>,
+                        <span className="font-semibold text-teal-700">{usd(Number(c.total_spend ?? c.lifetime_value) || 0)}</span>,
+                        <span className={Number(c.outstanding_balance) > 0 ? "font-semibold text-red-600" : "text-muted-foreground"}>{usd(Number(c.outstanding_balance) || 0)}</span>,
                         <Link href={`/clients/${safeStr(c.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
@@ -1264,7 +1264,7 @@ function TrailerReportsPageContent() {
                         headers={["CLIENT", "OUTSTANDING BALANCE", "LAST RENTAL DATE"]}
                         rows={clientsWithBalance.map((c) => [
                           <span className="font-medium">{safeStr(c.name || c.company_name) || "—"}</span>,
-                          <span className="font-semibold text-red-600">{ksh(Number(c.outstanding_balance) || 0)}</span>,
+                          <span className="font-semibold text-red-600">{usd(Number(c.outstanding_balance) || 0)}</span>,
                           <span className="text-muted-foreground">{safeStr(c.last_rental_date) || "—"}</span>,
                         ])}
                       />
@@ -1333,9 +1333,9 @@ function TrailerReportsPageContent() {
                       See <strong>Invoice Register</strong> for what's actually been collected.
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard label="Billed Revenue" value={ksh(billedRevenue)} valueClass="text-teal-700" />
+                      <StatCard label="Billed Revenue" value={usd(billedRevenue)} valueClass="text-teal-700" />
                       <StatCard label="Rentals Counted" value={String(rentals.length)} valueClass="text-blue-600" />
-                      <StatCard label="Avg. Revenue / Rental" value={ksh(rentals.length ? billedRevenue / rentals.length : 0)} valueClass="text-purple-600" />
+                      <StatCard label="Avg. Revenue / Rental" value={usd(rentals.length ? billedRevenue / rentals.length : 0)} valueClass="text-purple-600" />
                     </div>
                     <DataTable
                       headers={["RENTAL ID", "TRAILER(S)", "CLIENT", "DATE", "AMOUNT", "STATUS"]}
@@ -1345,7 +1345,7 @@ function TrailerReportsPageContent() {
                         <span>{rentalTrailerLabel(r)}</span>,
                         <span className="text-muted-foreground">{safeStr(r.client_name || r.client) || "—"}</span>,
                         <span className="text-muted-foreground">{safeStr(r.start_date) || "—"}</span>,
-                        <span className="font-semibold">{ksh(Number(r.total_amount ?? r.total ?? r.amount) || 0)}</span>,
+                        <span className="font-semibold">{usd(Number(r.total_amount ?? r.total ?? r.amount) || 0)}</span>,
                         <StatusBadge status={safeStr(r.status) || "Active"} />,
                       ])}
                     />
@@ -1358,10 +1358,10 @@ function TrailerReportsPageContent() {
                       This is <strong>collected / financial</strong> revenue — grounded in actual invoices and payments received.
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                      <StatCard label="Total Invoiced" value={ksh(invoiceTotals.totalInvoiced)} valueClass="text-blue-600" />
-                      <StatCard label="Total Collected" value={ksh(invoiceTotals.totalCollected)} valueClass="text-teal-700" />
-                      <StatCard label="Outstanding" value={ksh(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
-                      <StatCard label="Overdue" value={ksh(invoiceTotals.overdueAmount)} sub={`${invoiceTotals.overdueCount} invoices`} valueClass="text-red-600" />
+                      <StatCard label="Total Invoiced" value={usd(invoiceTotals.totalInvoiced)} valueClass="text-blue-600" />
+                      <StatCard label="Total Collected" value={usd(invoiceTotals.totalCollected)} valueClass="text-teal-700" />
+                      <StatCard label="Outstanding" value={usd(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
+                      <StatCard label="Overdue" value={usd(invoiceTotals.overdueAmount)} sub={`${invoiceTotals.overdueCount} invoices`} valueClass="text-red-600" />
                     </div>
                     <DataTable
                       headers={["INVOICE #", "CLIENT", "DATE", "DUE", "TOTAL", "PAID", "BALANCE", "STATUS"]}
@@ -1374,9 +1374,9 @@ function TrailerReportsPageContent() {
                           <span className="font-medium">{safeStr(inv.client_name || inv.client) || "—"}</span>,
                           <span className="text-muted-foreground">{safeStr(inv.date || inv.issue_date) || "—"}</span>,
                           <span className={isInvoiceOverdue(inv) ? "text-red-600 font-semibold" : "text-muted-foreground"}>{safeStr(inv.due_date) || "—"}</span>,
-                          <span>{ksh(total)}</span>,
-                          <span className="text-teal-700">{ksh(total - balance)}</span>,
-                          <span className={balance > 0 ? "font-semibold" : "text-muted-foreground"}>{ksh(balance)}</span>,
+                          <span>{usd(total)}</span>,
+                          <span className="text-teal-700">{usd(total - balance)}</span>,
+                          <span className={balance > 0 ? "font-semibold" : "text-muted-foreground"}>{usd(balance)}</span>,
                           <StatusBadge status={isInvoiceOverdue(inv) ? "Overdue" : invoiceStatus(inv)} />,
                         ]
                       })}
@@ -1389,7 +1389,7 @@ function TrailerReportsPageContent() {
                     <SectionHeader title="Accounts Receivable Aging" sub="Outstanding invoice balances bucketed by days overdue" />
                     <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
                       {agingChartData.map((b, i) => (
-                        <StatCard key={b.bucket} label={b.bucket === "Current" ? "Current" : `${b.bucket} days`} value={ksh(b.amount)}
+                        <StatCard key={b.bucket} label={b.bucket === "Current" ? "Current" : `${b.bucket} days`} value={usd(b.amount)}
                           valueClass={i === 0 ? "text-teal-700" : i < 3 ? "text-amber-600" : "text-red-600"} />
                       ))}
                     </div>
@@ -1402,7 +1402,7 @@ function TrailerReportsPageContent() {
                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
                               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                              <Tooltip formatter={fmtKsh} />
+                              <Tooltip formatter={fmtUsd} />
                               <Bar dataKey="amount" radius={[4,4,0,0]} name="Outstanding">
                                 {agingChartData.map((_, i) => <Cell key={String(i)} fill={AGING_BUCKET_COLORS[i]} />)}
                               </Bar>
@@ -1415,7 +1415,7 @@ function TrailerReportsPageContent() {
                       headers={["AGING BUCKET", "OUTSTANDING AMOUNT", "% OF TOTAL AR"]}
                       rows={agingChartData.map((b) => [
                         <span className="font-medium">{b.bucket === "Current" ? "Current" : `${b.bucket} days overdue`}</span>,
-                        <span className="font-semibold">{ksh(b.amount)}</span>,
+                        <span className="font-semibold">{usd(b.amount)}</span>,
                         <span>{invoiceTotals.totalOutstanding ? Math.round((b.amount / invoiceTotals.totalOutstanding) * 100) : 0}%</span>,
                       ])}
                     />
@@ -1426,7 +1426,7 @@ function TrailerReportsPageContent() {
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Expenses" value={String(filteredExpenses.length)} valueClass="text-blue-600" />
-                      <StatCard label="Total Amount" value={ksh(expenseTotal)} valueClass="text-red-600" />
+                      <StatCard label="Total Amount" value={usd(expenseTotal)} valueClass="text-red-600" />
                     </div>
                     <DataTable
                       headers={["EXPENSE ID", "DATE", "CATEGORY", "DESCRIPTION", "AMOUNT", "STATUS"]}
@@ -1436,7 +1436,7 @@ function TrailerReportsPageContent() {
                         <span className="text-muted-foreground whitespace-nowrap">{safeStr(e.date)}</span>,
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">{safeStr(e.category)}</span>,
                         <span className="text-muted-foreground max-w-36 truncate block">{safeStr(e.description)}</span>,
-                        <span className="font-semibold whitespace-nowrap">{ksh(Number(e.amount) || 0)}</span>,
+                        <span className="font-semibold whitespace-nowrap">{usd(Number(e.amount) || 0)}</span>,
                         <StatusBadge status={safeStr(e.status) || "Approved"} />,
                       ])}
                     />
@@ -1449,28 +1449,28 @@ function TrailerReportsPageContent() {
                       <Card className="bg-card border-border rounded-xl border-t-4 border-t-teal-500">
                         <CardHeader className="pb-1"><CardTitle className="text-sm font-semibold">Billed Basis (Rentals)</CardTitle></CardHeader>
                         <CardContent className="space-y-3">
-                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Revenue</span><span className="font-semibold">{ksh(billedRevenue)}</span></div>
-                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{ksh(expenseTotal)}</span></div>
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Revenue</span><span className="font-semibold">{usd(billedRevenue)}</span></div>
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{usd(expenseTotal)}</span></div>
                           <div className="flex justify-between text-base pt-2 border-t border-border">
                             <span className="font-semibold">Net Profit / Loss</span>
-                            <span className={`font-bold ${billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{ksh(billedProfitLoss)}</span>
+                            <span className={`font-bold ${billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{usd(billedProfitLoss)}</span>
                           </div>
                         </CardContent>
                       </Card>
                       <Card className="bg-card border-border rounded-xl border-t-4 border-t-blue-500">
                         <CardHeader className="pb-1"><CardTitle className="text-sm font-semibold">Collected Basis (Invoices / Cash)</CardTitle></CardHeader>
                         <CardContent className="space-y-3">
-                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Revenue</span><span className="font-semibold">{ksh(invoiceTotals.totalCollected)}</span></div>
-                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{ksh(expenseTotal)}</span></div>
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Revenue</span><span className="font-semibold">{usd(invoiceTotals.totalCollected)}</span></div>
+                          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{usd(expenseTotal)}</span></div>
                           <div className="flex justify-between text-base pt-2 border-t border-border">
                             <span className="font-semibold">Net Profit / Loss</span>
-                            <span className={`font-bold ${collectedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{ksh(collectedProfitLoss)}</span>
+                            <span className={`font-bold ${collectedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{usd(collectedProfitLoss)}</span>
                           </div>
                         </CardContent>
                       </Card>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      The gap between the two ({ksh(Math.abs(billedRevenue - invoiceTotals.totalCollected))}) is roughly your outstanding receivables — see AR Aging for the breakdown.
+                      The gap between the two ({usd(Math.abs(billedRevenue - invoiceTotals.totalCollected))}) is roughly your outstanding receivables — see AR Aging for the breakdown.
                     </p>
                     <Card className="bg-card border-border rounded-xl">
                       <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Billed vs Collected vs Expenses</CardTitle></CardHeader>
@@ -1495,7 +1495,7 @@ function TrailerReportsPageContent() {
                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                              <Tooltip formatter={fmtKsh} />
+                              <Tooltip formatter={fmtUsd} />
                               <Legend wrapperStyle={{ fontSize: 11 }} />
                               <Area type="monotone" dataKey="billed" stroke="#0F6E56" fill="url(#billedGrad)" strokeWidth={2} name="Billed (Rentals)" />
                               <Area type="monotone" dataKey="collected" stroke="#3B82F6" fill="url(#collectedGrad)" strokeWidth={2} name="Collected (Invoices)" />
@@ -1519,7 +1519,7 @@ function TrailerReportsPageContent() {
                   <StatCard label="Total Records" value={String(maintenanceTotals.total)} valueClass="text-blue-600" />
                   <StatCard label="Scheduled" value={String(maintenanceTotals.scheduled)} valueClass="text-amber-600" />
                   <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-teal-700" />
-                  <StatCard label="Total Cost" value={ksh(maintenanceTotals.totalCost)} valueClass="text-red-600" />
+                  <StatCard label="Total Cost" value={usd(maintenanceTotals.totalCost)} valueClass="text-red-600" />
                 </div>
                 <DataTable
                   headers={["TRAILER", "TYPE", "DATE", "COST", "STATUS", "NEXT SERVICE"]}
@@ -1528,7 +1528,7 @@ function TrailerReportsPageContent() {
                     <span className="font-medium">{safeStr(m.trailer_name || m.trailer) || "—"}</span>,
                     <span className="text-muted-foreground">{safeStr(m.type) || "—"}</span>,
                     <span className="text-muted-foreground">{safeStr(m.date) || "—"}</span>,
-                    <span className="font-semibold">{ksh(Number(m.cost) || 0)}</span>,
+                    <span className="font-semibold">{usd(Number(m.cost) || 0)}</span>,
                     <StatusBadge status={safeStr(m.status) || "Scheduled"} />,
                     <span className="text-muted-foreground">{safeStr(m.next_service_date) || "—"}</span>,
                   ])}
@@ -1543,14 +1543,14 @@ function TrailerReportsPageContent() {
                   actions={<ExportBtn onClick={exportTaxSummaryCSV} label="Export CSV" variant="teal" />} />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard label="Gross Revenue (Billed)" value={ksh(billedRevenue)} valueClass="text-teal-700" />
-                    <StatCard label="Deductible Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
-                    <StatCard label="Taxable Profit (Billed)" value={ksh(billedProfitLoss)} valueClass={billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
+                    <StatCard label="Gross Revenue (Billed)" value={usd(billedRevenue)} valueClass="text-teal-700" />
+                    <StatCard label="Deductible Expenses" value={usd(expenseTotal)} valueClass="text-red-600" />
+                    <StatCard label="Taxable Profit (Billed)" value={usd(billedProfitLoss)} valueClass={billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard label="Gross Revenue (Collected)" value={ksh(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
-                    <StatCard label="Deductible Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
-                    <StatCard label="Taxable Profit (Cash basis)" value={ksh(collectedProfitLoss)} valueClass={collectedProfitLoss >= 0 ? "text-blue-600" : "text-red-600"} />
+                    <StatCard label="Gross Revenue (Collected)" value={usd(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
+                    <StatCard label="Deductible Expenses" value={usd(expenseTotal)} valueClass="text-red-600" />
+                    <StatCard label="Taxable Profit (Cash basis)" value={usd(collectedProfitLoss)} valueClass={collectedProfitLoss >= 0 ? "text-blue-600" : "text-red-600"} />
                   </div>
                 </div>
                 <EmptyState message="Detailed tax filing breakdowns (VAT, withholding, etc.) will appear here once statutory categories are configured — confirm with your accountant which basis (billed/accrual vs collected/cash) applies for KRA filing." />
@@ -1577,7 +1577,7 @@ function TrailerReportsPageContent() {
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
-                      <StatCard label="Pending Value" value={ksh(quotationTotals.pendingValue)} valueClass="text-amber-600" icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
+                      <StatCard label="Pending Value" value={usd(quotationTotals.pendingValue)} valueClass="text-amber-600" icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
                       <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
                       <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
@@ -1754,7 +1754,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <StatCard label="Total Clients" value={String(clientTotals.total)} valueClass="text-blue-600" />
                       <StatCard label="With Outstanding Balance" value={String(clientTotals.withBalance)} valueClass="text-amber-600" />
-                      <StatCard label="Total Outstanding" value={ksh(clientTotals.outstanding)} valueClass="text-red-600" />
+                      <StatCard label="Total Outstanding" value={usd(clientTotals.outstanding)} valueClass="text-red-600" />
                     </div>
                     <Card className="bg-card border-border rounded-xl">
                       <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Top Clients by Spend</CardTitle></CardHeader>
@@ -1765,7 +1765,7 @@ function TrailerReportsPageContent() {
                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                              <Tooltip formatter={fmtKsh} />
+                              <Tooltip formatter={fmtUsd} />
                               <Bar dataKey="totalSpend" fill="#0F6E56" radius={[4,4,0,0]} name="Total Spend" />
                             </BarChart>
                           </ResponsiveContainer>
@@ -1781,7 +1781,7 @@ function TrailerReportsPageContent() {
                     rows={topClients.map((c) => [
                       <span className="font-medium">{c.name}</span>,
                       <span>{c.rentalsCount}</span>,
-                      <span className="font-semibold text-teal-700">{ksh(c.totalSpend)}</span>,
+                      <span className="font-semibold text-teal-700">{usd(c.totalSpend)}</span>,
                     ])}
                   />
                 )}
@@ -1799,10 +1799,10 @@ function TrailerReportsPageContent() {
                 {financeAnalyticsSubTab === "Overview" && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                      <StatCard label="Billed Revenue" value={ksh(billedRevenue)} valueClass="text-teal-700" />
-                      <StatCard label="Collected Revenue" value={ksh(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
-                      <StatCard label="Total Expenses" value={ksh(expenseTotal)} valueClass="text-red-600" />
-                      <StatCard label="Outstanding AR" value={ksh(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
+                      <StatCard label="Billed Revenue" value={usd(billedRevenue)} valueClass="text-teal-700" />
+                      <StatCard label="Collected Revenue" value={usd(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
+                      <StatCard label="Total Expenses" value={usd(expenseTotal)} valueClass="text-red-600" />
+                      <StatCard label="Outstanding AR" value={usd(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <Card className="bg-card border-border rounded-xl">
@@ -1814,7 +1814,7 @@ function TrailerReportsPageContent() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                                <Tooltip formatter={fmtKsh} />
+                                <Tooltip formatter={fmtUsd} />
                                 <Bar dataKey="value" radius={[4,4,0,0]} name="Amount">
                                   {categoryChartData.map((_, i) => <Cell key={String(i)} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Bar>
@@ -1849,7 +1849,7 @@ function TrailerReportsPageContent() {
                               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
                               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                              <Tooltip formatter={fmtKsh} />
+                              <Tooltip formatter={fmtUsd} />
                               <Bar dataKey="amount" radius={[4,4,0,0]} name="Outstanding">
                                 {agingChartData.map((_, i) => <Cell key={String(i)} fill={AGING_BUCKET_COLORS[i]} />)}
                               </Bar>
@@ -1870,7 +1870,7 @@ function TrailerReportsPageContent() {
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                             <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                             <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                            <Tooltip formatter={fmtKsh} />
+                            <Tooltip formatter={fmtUsd} />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
                             <Bar dataKey="billed" fill="#0F6E56" name="Billed (Rentals)" radius={[4,4,0,0]} />
                             <Bar dataKey="collected" fill="#3B82F6" name="Collected (Invoices)" radius={[4,4,0,0]} />
@@ -1891,7 +1891,7 @@ function TrailerReportsPageContent() {
                   <StatCard label="Total Records" value={String(maintenanceTotals.total)} valueClass="text-blue-600" />
                   <StatCard label="Scheduled" value={String(maintenanceTotals.scheduled)} valueClass="text-amber-600" />
                   <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-teal-700" />
-                  <StatCard label="Total Cost" value={ksh(maintenanceTotals.totalCost)} valueClass="text-red-600" />
+                  <StatCard label="Total Cost" value={usd(maintenanceTotals.totalCost)} valueClass="text-red-600" />
                 </div>
                 <EmptyState message="Maintenance trend charts will appear once more service history is logged." />
               </section>
