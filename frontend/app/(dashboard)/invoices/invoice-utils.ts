@@ -1,6 +1,7 @@
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import type { Invoice, InvoiceLineItem, InvoiceStatus } from "./types-and-api-notes"
+import { lineTotal } from "../rentals/rental-utils"
 
 export const DEFAULT_VAT_PERCENT = 16
 export const INVOICE_STATUSES: InvoiceStatus[] = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Void"]
@@ -9,16 +10,27 @@ export function kes(value: number): string {
   return `USD ${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export function lineItemAmount(item: Pick<InvoiceLineItem, "quantity" | "rate"> | { quantity: number; rate: number | string }): number {
-  return Number(item.quantity || 0) * Number(item.rate || 0)
+export function lineItemAmount(
+  item: Pick<InvoiceLineItem, "quantity" | "rate" | "rateUnit"> | { quantity: number | string; rate: number | string; rateUnit?: string },
+  startDate?: string,
+  endDate?: string,
+): number {
+  const quantity = Number(item.quantity || 0)
+  const rate = Number(item.rate || 0)
+  if (startDate && endDate && item.rateUnit && item.rateUnit !== "flat") {
+    return lineTotal({ rate, rateUnit: item.rateUnit as "day" | "week" | "month" | "flat", quantity }, startDate, endDate)
+  }
+  return quantity * rate
 }
 
 export function computeTotals(
-  lineItems: Array<Pick<InvoiceLineItem, "quantity" | "rate"> | { quantity: number | string; rate: number | string }>,
+  lineItems: Array<Pick<InvoiceLineItem, "quantity" | "rate" | "rateUnit"> | { quantity: number | string; rate: number | string; rateUnit?: string }>,
   discountPercent: number | string,
   vatPercent: number | string,
+  startDate?: string,
+  endDate?: string,
 ) {
-  const subtotal = lineItems.reduce((sum, li) => sum + lineItemAmount(li), 0)
+  const subtotal = lineItems.reduce((sum, li) => sum + lineItemAmount(li, startDate, endDate), 0)
   const discountAmount = subtotal * (Number(discountPercent || 0) / 100)
   const taxable = subtotal - discountAmount
   const vatAmount = taxable * (Number(vatPercent || 0) / 100)

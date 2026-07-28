@@ -1,6 +1,7 @@
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import type { Quotation, QuotationLineItem, QuotationStatus } from "./types-and-api-notes"
+import { lineTotal } from "../rentals/rental-utils"
 
 export const DEFAULT_VAT_PERCENT = 16
 export const QUOTATION_STATUSES: QuotationStatus[] = [
@@ -12,16 +13,27 @@ export function kes(value: number): string {
 }
 
 // ── Line item math ──────────────────────────────────────────────────────
-export function lineItemAmount(item: Pick<QuotationLineItem, "quantity" | "rate"> | { quantity: number | string; rate: number | string }): number {
-  return Number(item.quantity || 0) * Number(item.rate || 0)
+export function lineItemAmount(
+  item: Pick<QuotationLineItem, "quantity" | "rate" | "rateUnit"> | { quantity: number | string; rate: number | string; rateUnit?: string },
+  startDate?: string,
+  endDate?: string,
+): number {
+  const quantity = Number(item.quantity || 0)
+  const rate = Number(item.rate || 0)
+  if (startDate && endDate && item.rateUnit && item.rateUnit !== "flat") {
+    return lineTotal({ rate, rateUnit: item.rateUnit as "day" | "week" | "month" | "flat", quantity }, startDate, endDate)
+  }
+  return quantity * rate
 }
 
 export function computeTotals(
-  lineItems: Array<Pick<QuotationLineItem, "quantity" | "rate"> | { quantity: number | string; rate: number | string }>,
+  lineItems: Array<Pick<QuotationLineItem, "quantity" | "rate" | "rateUnit"> | { quantity: number | string; rate: number | string; rateUnit?: string }>,
   discountPercent: number | string,
   vatPercent: number | string,
+  startDate?: string,
+  endDate?: string,
 ) {
-  const subtotal = lineItems.reduce((sum, li) => sum + lineItemAmount(li), 0)
+  const subtotal = lineItems.reduce((sum, li) => sum + lineItemAmount(li, startDate, endDate), 0)
   const discountAmount = subtotal * (Number(discountPercent || 0) / 100)
   const taxable = subtotal - discountAmount
   const vatAmount = taxable * (Number(vatPercent || 0) / 100)

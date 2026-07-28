@@ -68,6 +68,7 @@ export interface Invoice {
   payments: Payment[]
   sourceType?: "quotation" | "rental" | null
   sourceId?: string | null
+  rentalId?: string | null
   notes?: string
   terms?: string
   createdAt: string

@@ -10,6 +10,7 @@ import { Table, Column } from "@/components/ui/Table"
 import { Badge } from "@/components/ui/badge"
 import type { Paginated, Quotation, QuotationPayload, QuotationStatus } from "./types-and-api-notes"
 import { quotationApi } from "./quotation-api"
+import { clientApi } from "../clients/client-api"
 import {
   QUOTATION_STATUSES, canConvert, canDelete, canEdit, canMarkAcceptedRejected, canSend,
   exportQuotationPDF, exportQuotationsCSV, isExpiringSoon, kes,
@@ -46,6 +47,7 @@ function ActionsMenu({ quotation, onAction }: { quotation: Quotation; onAction: 
     { key: "duplicate", label: "Duplicate", icon: <Copy className="w-3.5 h-3.5" /> },
     { key: "pdf", label: "Download PDF", icon: <Download className="w-3.5 h-3.5" /> },
     ...(canSend(quotation.status) ? [{ key: "send", label: "Send to client", icon: <Send className="w-3.5 h-3.5" /> }] : []),
+    ...(quotation.clientId ? [{ key: "documents", label: "Send documents to client", icon: <Send className="w-3.5 h-3.5" /> }] : []),
     ...(canMarkAcceptedRejected(quotation.status)
       ? [
           { key: "accept", label: "Mark accepted", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
@@ -53,7 +55,7 @@ function ActionsMenu({ quotation, onAction }: { quotation: Quotation; onAction: 
         ]
       : []),
     ...(canConvert(quotation.status)
-      ? [{ key: "convert", label: "Convert to rental", icon: <ArrowRightCircle className="w-3.5 h-3.5" /> }]
+      ? [{ key: "convert", label: "Convert to invoice", icon: <ArrowRightCircle className="w-3.5 h-3.5" /> }]
       : []),
     ...(canDelete(quotation.status)
       ? [{ key: "delete", label: "Delete", icon: <Trash2 className="w-3.5 h-3.5" />, danger: true }]
@@ -102,6 +104,7 @@ export default function QuotationsPage() {
   const [editing, setEditing] = useState<Quotation | null>(null)
   const [viewing, setViewing] = useState<Quotation | null>(null)
   const [actionError, setActionError] = useState("")
+  const [infoMessage, setInfoMessage] = useState("")
   const [convertingId, setConvertingId] = useState<string | null>(null)
 
   const getApiErrorMessage = (error: unknown, fallback: string) => {
@@ -156,6 +159,7 @@ export default function QuotationsPage() {
 
   async function handleAction(quotation: Quotation, action: string) {
     setActionError("")
+    setInfoMessage("")
     try {
       switch (action) {
         case "view": setViewing(quotation); return
@@ -175,6 +179,12 @@ export default function QuotationsPage() {
           await load()
           return
         }
+        case "documents": {
+          if (!quotation.clientId) throw new Error("Link this quotation to a saved client before sending documents.")
+          await clientApi.sendDocuments(quotation.clientId, { quotation: quotation.id })
+          setInfoMessage(`Rental documents were sent to ${quotation.clientName}.`)
+          return
+        }
         case "accept": {
           await quotationApi.markStatus(quotation.id, "Accepted")
           await load()
@@ -187,7 +197,10 @@ export default function QuotationsPage() {
         }
         case "convert": {
           setConvertingId(quotation.id)
-          await quotationApi.convert(quotation.id)
+          const result = await quotationApi.convert(quotation.id)
+          if (result.invoiceNumber) {
+            setInfoMessage(`Converted ${quotation.quotationNumber} to invoice ${result.invoiceNumber}.`)
+          }
           await load()
           return
         }
@@ -365,7 +378,7 @@ export default function QuotationsPage() {
 
       {convertingId && (
         <div className="fixed bottom-4 right-4 px-4 py-3 rounded-lg bg-card border border-border shadow-lg text-sm">
-          Converting quotation to a rental…
+          Converting quotation to invoice…
         </div>
       )}
     </div>

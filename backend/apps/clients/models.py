@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -58,6 +60,64 @@ class Client(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ClientDocumentSigningRequest(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("sent", "Sent"),
+        ("viewed", "Viewed"),
+        ("signed", "Signed"),
+        ("uploaded", "Uploaded"),
+        ("verified", "Verified"),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="document_signing_requests")
+    rental = models.ForeignKey("rentals.Rental", null=True, blank=True, on_delete=models.SET_NULL, related_name="document_signing_requests")
+    quotation = models.ForeignKey("quotations.Quotation", null=True, blank=True, on_delete=models.SET_NULL, related_name="document_signing_requests")
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    contract_pdf = models.FileField(upload_to="clients/signing/contracts/", null=True, blank=True)
+    inspection_pdf = models.FileField(upload_to="clients/signing/inspections/", null=True, blank=True)
+    signed_contract_file = models.FileField(upload_to="clients/signing/signed_contracts/", null=True, blank=True)
+    signed_inspection_file = models.FileField(upload_to="clients/signing/signed_inspections/", null=True, blank=True)
+    contract_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    inspection_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    viewed_at = models.DateTimeField(null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def is_complete(self):
+        return self.contract_status in {"signed", "uploaded", "verified"} and self.inspection_status in {"signed", "uploaded", "verified"}
+
+    def __str__(self):
+        return f"Signing request for {self.client.name}"
+
+
+class DocumentSigningEvent(models.Model):
+    EVENT_CHOICES = [
+        ("sent", "Sent"),
+        ("viewed", "Viewed"),
+        ("signed", "Signed"),
+        ("uploaded", "Uploaded"),
+        ("verified", "Verified"),
+        ("declined", "Declined"),
+    ]
+
+    request = models.ForeignKey(ClientDocumentSigningRequest, on_delete=models.CASCADE, related_name="events")
+    event_type = models.CharField(max_length=20, choices=EVENT_CHOICES)
+    details = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
 
 
 class ClientDocument(models.Model):

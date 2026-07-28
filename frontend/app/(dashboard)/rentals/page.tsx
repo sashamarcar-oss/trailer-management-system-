@@ -10,6 +10,7 @@ import { Table, Column } from "@/components/ui/Table"
 import { Badge } from "@/components/ui/badge"
 import type { Rental, RentalPayload, RentalStatus, Paginated } from "./types-and-api-notes"
 import { rentalApi } from "./rental-api"
+import { clientApi } from "../clients/client-api"
 import {
   RENTAL_STATUSES, canCancel, canDelete, canEdit, canActivate, canMarkReturned,
   daysOverdue, depositBalance, displayStatus, exportRentalAgreementPDF, exportRentalsCSV, isOverdue, kes,
@@ -45,6 +46,7 @@ function ActionsMenu({ rental, onAction }: { rental: Rental; onAction: (action: 
     { key: "view", label: "View", icon: <Eye className="w-3.5 h-3.5" /> },
     ...(canEdit(rental.status) ? [{ key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> }] : []),
     { key: "agreement", label: "Download agreement", icon: <Download className="w-3.5 h-3.5" /> },
+    ...(rental.status !== "Cancelled" && rental.status !== "Completed" ? [{ key: "documents", label: "Send documents to client", icon: <FileText className="w-3.5 h-3.5" /> }] : []),
     ...(rental.status === "Draft" ? [{ key: "confirm", label: "Confirm rental", icon: <CheckCircle2 className="w-3.5 h-3.5" /> }] : []),
     ...(rental.status === "Reserved" ? [{ key: "deposit", label: "Record deposit", icon: <Banknote className="w-3.5 h-3.5" /> }] : []),
     ...(canActivate(rental.status) ? [{ key: "checkout", label: "Check out (activate)", icon: <PlayCircle className="w-3.5 h-3.5" /> }] : []),
@@ -158,6 +160,12 @@ export default function RentalsPage() {
         case "view": setViewing(rental); return
         case "edit": setEditing(rental); setDialogOpen(true); return
         case "agreement": exportRentalAgreementPDF(rental); return
+        case "documents": {
+          if (!rental.clientId) throw new Error("Link this rental to a saved client before sending documents.")
+          await clientApi.sendDocuments(rental.clientId, { rental: rental.id })
+          await load()
+          return
+        }
         case "confirm": {
           if (!window.confirm(`Confirm ${rental.rentalNumber} and reserve its trailer?`)) return
           await rentalApi.confirm(rental.id); await load(); return

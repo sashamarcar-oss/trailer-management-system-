@@ -5,8 +5,6 @@ import { X } from "lucide-react"
 import { api } from "@/lib/api"
 import type { Client, ClientPayload } from "./types-and-api-notes"
 
-const CLIENT_TYPES = ["Individual", "Company"]
-
 export function ClientFormDialog({
   open,
   onClose,
@@ -19,21 +17,14 @@ export function ClientFormDialog({
   editing: Client | null // null = creating
 }) {
   const [name, setName] = useState("")
-  const [clientType, setClientType] = useState("Individual")
   const [contactPhone, setContactPhone] = useState("")
   const [contactEmail, setContactEmail] = useState("")
-  const [secondaryContactName, setSecondaryContactName] = useState("")
-  const [secondaryContactPhone, setSecondaryContactPhone] = useState("")
   const [address, setAddress] = useState("")
-  const [kraPin, setKraPin] = useState("")
-  const [businessRegistration, setBusinessRegistration] = useState("")
   const [passport, setPassport] = useState("")
   const [currency, setCurrency] = useState<"USD" | "KES">("USD")
   const [driversLicenseFile, setDriversLicenseFile] = useState<File | null>(null)
   const [insuranceFile, setInsuranceFile] = useState<File | null>(null)
   const [dotFile, setDotFile] = useState<File | null>(null)
-  const [signedContractFile, setSignedContractFile] = useState<File | null>(null)
-  const [inspectionReportFile, setInspectionReportFile] = useState<File | null>(null)
   const [creditLimit, setCreditLimit] = useState(0)
   const [paymentTermsDays, setPaymentTermsDays] = useState(30)
   const [notes, setNotes] = useState("")
@@ -44,24 +35,18 @@ export function ClientFormDialog({
     if (!open) return
     if (editing) {
       setName(editing.name)
-      setClientType(editing.client_type || "Individual")
       setContactPhone(editing.contact_phone || "")
       setContactEmail(editing.contact_email || "")
-      setSecondaryContactName(editing.secondary_contact_name || "")
-      setSecondaryContactPhone(editing.secondary_contact_phone || "")
       setAddress(editing.address || "")
-      setKraPin(editing.kra_pin || "")
-      setBusinessRegistration(editing.business_registration || "")
       setPassport(editing.passport || "")
       setCurrency(editing.currency || "USD")
       setCreditLimit(editing.credit_limit || 0)
       setPaymentTermsDays(editing.payment_terms_days ?? 30)
       setNotes(editing.notes || "")
     } else {
-      setName(""); setClientType("Individual"); setContactPhone(""); setContactEmail("")
-      setSecondaryContactName(""); setSecondaryContactPhone(""); setAddress("")
-      setKraPin(""); setBusinessRegistration(""); setPassport(""); setCurrency("USD")
-      setDriversLicenseFile(null); setInsuranceFile(null); setDotFile(null); setSignedContractFile(null); setInspectionReportFile(null)
+      setName(""); setContactPhone(""); setContactEmail("")
+      setAddress(""); setPassport(""); setCurrency("USD")
+      setDriversLicenseFile(null); setInsuranceFile(null); setDotFile(null)
       setCreditLimit(0); setPaymentTermsDays(30); setNotes("")
     }
     setError("")
@@ -75,26 +60,19 @@ export function ClientFormDialog({
     if (!name.trim()) { setError("Client name is required."); return }
     if (!contactPhone.trim()) { setError("A contact phone number is required."); return }
     if (!contactEmail.trim()) { setError("An email address is required."); return }
-    if (clientType === "Company" && (!kraPin.trim() || !businessRegistration.trim())) { setError("Company clients require a KRA PIN and business registration number."); return }
-    if (clientType === "Individual" && !passport.trim()) { setError("Individual clients require a passport number."); return }
+    if (!passport.trim()) { setError("A passport number is required."); return }
 
     const payload: ClientPayload = {
       name: name.trim(),
-      client_type: clientType,
+      client_type: "Individual",
       contact_phone: contactPhone.trim(),
       contact_email: contactEmail.trim() || undefined,
-      secondary_contact_name: clientType === "Company" ? secondaryContactName.trim() || undefined : undefined,
-      secondary_contact_phone: clientType === "Company" ? secondaryContactPhone.trim() || undefined : undefined,
       address: address.trim() || undefined,
-      kra_pin: clientType === "Company" ? kraPin.trim() || undefined : undefined,
-      business_registration: clientType === "Company" ? businessRegistration.trim() || undefined : undefined,
-      passport: clientType === "Individual" ? passport.trim() || undefined : undefined,
+      passport: passport.trim() || undefined,
       currency,
       drivers_license_file: driversLicenseFile,
       insurance_file: insuranceFile,
       dot_file: dotFile,
-      signed_contract_file: signedContractFile,
-      inspection_report_file: inspectionReportFile,
       credit_limit: Number(creditLimit) || 0,
       payment_terms_days: Number(paymentTermsDays) || undefined,
       notes: notes.trim() || undefined,
@@ -129,24 +107,12 @@ export function ClientFormDialog({
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Client name *</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm"
-                placeholder={clientType === "Company" ? "e.g. Acme Logistics Ltd" : "e.g. Jane Wanjiru"} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</label>
-              <select value={clientType} onChange={(e) => setClientType(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm">
-                {CLIENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+                placeholder="e.g. Jane Wanjiru" />
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact phone *</label>
               <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" placeholder="07xx xxx xxx" />
-            </div>
-            <div className="col-span-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</label>
-              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Currency</label>
@@ -156,73 +122,39 @@ export function ClientFormDialog({
                 <option value="KES">Kenyan Shillings (KES)</option>
               </select>
             </div>
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email *</label>
+              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+            </div>
           </div>
 
-          {clientType === "Company" && (
-            <div className="space-y-4 p-3 rounded-lg bg-muted/30 border border-border">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">Day-to-day contact person</p>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Name</label>
-                  <input value={secondaryContactName} onChange={(e) => setSecondaryContactName(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Phone</label>
-                  <input value={secondaryContactPhone} onChange={(e) => setSecondaryContactPhone(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">KRA PIN *</label>
-                  <input value={kraPin} onChange={(e) => setKraPin(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Business registration *</label>
-                  <input value={businessRegistration} onChange={(e) => setBusinessRegistration(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-background p-4">
-                <p className="text-sm font-semibold">US logistics company document uploads</p>
-                <p className="text-xs text-muted-foreground mt-1">Documents required from lessee prior leasing: driver's license, insurance, DOT documentation. Documents required from lessor after leasing: signed contract, signed inspection report.</p>
-                <div className="grid grid-cols-1 gap-3 mt-4">
-                  <label className="block text-xs text-muted-foreground">Driver's license (lessee)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={(e) => setDriversLicenseFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
-                  {driversLicenseFile && <p className="text-xs text-muted-foreground">Selected: {driversLicenseFile.name}</p>}
-
-                  <label className="block text-xs text-muted-foreground">Insurance document (lessee)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={(e) => setInsuranceFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
-                  {insuranceFile && <p className="text-xs text-muted-foreground">Selected: {insuranceFile.name}</p>}
-
-                  <label className="block text-xs text-muted-foreground">DOT documentation (lessee)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={(e) => setDotFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
-                  {dotFile && <p className="text-xs text-muted-foreground">Selected: {dotFile.name}</p>}
-
-                  <label className="block text-xs text-muted-foreground">Signed contract (lessor)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={(e) => setSignedContractFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
-                  {signedContractFile && <p className="text-xs text-muted-foreground">Selected: {signedContractFile.name}</p>}
-
-                  <label className="block text-xs text-muted-foreground">Signed inspection report (lessor)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={(e) => setInspectionReportFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
-                  {inspectionReportFile && <p className="text-xs text-muted-foreground">Selected: {inspectionReportFile.name}</p>}
-                </div>
-              </div>
+          <div className="grid grid-cols-1 gap-4 p-3 rounded-lg bg-muted/30 border border-border">
+            <div>
+              <label className="text-xs text-muted-foreground">Passport *</label>
+              <input value={passport} onChange={(e) => setPassport(e.target.value)} required
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
-          )}
+          </div>
 
-          {clientType === "Individual" && (
-            <div className="grid grid-cols-1 gap-4 p-3 rounded-lg bg-muted/30 border border-border">
-              <div>
-                <label className="text-xs text-muted-foreground">Passport</label>
-                <input value={passport} onChange={(e) => setPassport(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-              </div>
+          <div className="rounded-xl border border-border bg-background p-4">
+            <p className="text-sm font-semibold">Document workflow</p>
+            <p className="text-xs text-muted-foreground mt-1">The admin can now send the contract and inspection report directly to the client; the client reviews, signs, or uploads the signed copies before checkout proceeds.</p>
+            <div className="grid grid-cols-1 gap-3 mt-4">
+              <label className="block text-xs text-muted-foreground">Driver's license</label>
+              <input type="file" accept="image/*,.pdf" onChange={(e) => setDriversLicenseFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+              {driversLicenseFile && <p className="text-xs text-muted-foreground">Selected: {driversLicenseFile.name}</p>}
+
+              <label className="block text-xs text-muted-foreground">Insurance document</label>
+              <input type="file" accept="image/*,.pdf" onChange={(e) => setInsuranceFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+              {insuranceFile && <p className="text-xs text-muted-foreground">Selected: {insuranceFile.name}</p>}
+
+              <label className="block text-xs text-muted-foreground">DOT documentation</label>
+              <input type="file" accept="image/*,.pdf" onChange={(e) => setDotFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />
+              {dotFile && <p className="text-xs text-muted-foreground">Selected: {dotFile.name}</p>}
+
             </div>
-          )}
+          </div>
 
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Address</label>

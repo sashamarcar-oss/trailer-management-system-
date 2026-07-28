@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle, Download, Eye, FileText, MoreVertical, Pencil, Plus, Search,
-  Trash2, Ban, CheckCircle2, ReceiptText,
+  Trash2, Ban, CheckCircle2, ReceiptText, Send,
 } from "lucide-react"
 import { ModuleHeader } from "@/components/ui/ModuleHeader"
 import { Table, Column } from "@/components/ui/Table"
@@ -59,6 +59,7 @@ function ActionsMenu({ client, onAction }: { client: Client; onAction: (action: 
   const items: { key: string; label: string; icon: React.ReactNode; danger?: boolean }[] = [
     { key: "view", label: "View profile", icon: <Eye className="w-3.5 h-3.5" /> },
     { key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> },
+    { key: "documents", label: "Send documents to client", icon: <Send className="w-3.5 h-3.5" /> },
     { key: "statement", label: "Download statement", icon: <ReceiptText className="w-3.5 h-3.5" /> },
     client.status === "Active"
       ? { key: "deactivate", label: "Mark inactive", icon: <Ban className="w-3.5 h-3.5" />, danger: true }
@@ -140,6 +141,12 @@ export default function ClientsPage() {
       switch (action) {
         case "view": setViewing(client); return
         case "edit": setEditing(client); setDialogOpen(true); return
+        case "documents": {
+          await clientApi.sendDocuments(client.id)
+          await load()
+          setActionError("")
+          return
+        }
         case "statement": {
           const lines: StatementLine[] = await clientApi.getStatement(client.id)
           exportClientStatementPDF(client, lines, "All time")
@@ -314,6 +321,15 @@ export default function ClientsPage() {
               ))}
             </ul>
           ) : "No documents uploaded" },
+          { label: "Signing status", value: viewing.document_signing_requests?.length ? (
+            <ul className="space-y-1 text-sm">
+              {viewing.document_signing_requests.map((request) => (
+                <li key={request.id}>
+                  Contract: {request.contract_status_display || request.contract_status} · Inspection: {request.inspection_status_display || request.inspection_status}
+                </li>
+              ))}
+            </ul>
+          ) : "No signing requests yet" },
           { label: "Notes", value: viewing.notes },
         ] : []}
       />

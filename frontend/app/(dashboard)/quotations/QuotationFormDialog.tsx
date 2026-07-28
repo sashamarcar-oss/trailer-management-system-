@@ -22,6 +22,11 @@ function emptyLineItem(): DraftLineItem {
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
+function in7DaysISO() {
+  const d = new Date()
+  d.setDate(d.getDate() + 7)
+  return d.toISOString().slice(0, 10)
+}
 function in14DaysISO() {
   const d = new Date()
   d.setDate(d.getDate() + 14)
@@ -45,6 +50,8 @@ export function QuotationFormDialog({
   const [clientPhone, setClientPhone] = useState("")
   const [issueDate, setIssueDate] = useState(todayISO())
   const [expiryDate, setExpiryDate] = useState(in14DaysISO())
+  const [startDate, setStartDate] = useState(todayISO())
+  const [endDate, setEndDate] = useState(in7DaysISO())
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
   const [discountPercent, setDiscountPercent] = useState<number | "">("")
   const [vatPercent, setVatPercent] = useState(0)
@@ -76,6 +83,8 @@ export function QuotationFormDialog({
       setClientPhone(editing.clientPhone || "")
       setIssueDate(editing.issueDate?.slice(0, 10) || todayISO())
       setExpiryDate(editing.expiryDate?.slice(0, 10) || in14DaysISO())
+      setStartDate(todayISO())
+      setEndDate(in7DaysISO())
       setItems(
         editing.lineItems.length
           ? editing.lineItems.map((li) => ({
@@ -95,6 +104,7 @@ export function QuotationFormDialog({
     } else {
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setIssueDate(todayISO()); setExpiryDate(in14DaysISO())
+      setStartDate(todayISO()); setEndDate(in7DaysISO())
       setItems([emptyLineItem()])
       setDiscountPercent(""); setVatPercent(0)
       setNotes("")
@@ -103,7 +113,7 @@ export function QuotationFormDialog({
     setError("")
   }, [open, editing])
 
-  const totals = useMemo(() => computeTotals(items, discountPercent, vatPercent), [items, discountPercent, vatPercent])
+  const totals = useMemo(() => computeTotals(items, discountPercent, vatPercent, startDate, endDate), [items, discountPercent, vatPercent, startDate, endDate])
 
   if (!open) return null
 
@@ -133,6 +143,7 @@ export function QuotationFormDialog({
     if (!clientName.trim()) { setError("Client name is required."); return }
     if (items.some((it) => !it.description.trim())) { setError("Every line item needs a description."); return }
     if (new Date(expiryDate) < new Date(issueDate)) { setError("Expiry date can't be before the issue date."); return }
+    if (new Date(endDate) < new Date(startDate)) { setError("Rental end date can't be before the start date."); return }
 
     const payload: QuotationPayload = {
       clientId: clientId || null,
@@ -235,7 +246,7 @@ export function QuotationFormDialog({
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Issue date</label>
               <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)}
@@ -244,6 +255,16 @@ export function QuotationFormDialog({
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expiry date</label>
               <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rental start</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rental end</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
           </div>
@@ -295,7 +316,7 @@ export function QuotationFormDialog({
                     <option value="flat">flat</option>
                   </select>
                   <div className="col-span-1 flex items-center justify-end gap-1 pt-2">
-                    <span className="text-xs font-semibold whitespace-nowrap">{kes(lineItemAmount(it))}</span>
+                    <span className="text-xs font-semibold whitespace-nowrap">{kes(lineItemAmount(it, startDate, endDate))}</span>
                   </div>
                   <button type="button" onClick={() => removeItem(it.key)}
                     className="col-span-12 sm:col-span-1 justify-self-end p-1.5 rounded hover:bg-red-50 text-red-500">

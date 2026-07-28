@@ -8,6 +8,21 @@ type BackendClientDocument = {
   uploaded_at: string
 }
 
+type BackendDocumentSigningRequest = {
+  id: number
+  client: number | string
+  token: string
+  contract_status: string
+  inspection_status: string
+  contract_status_display: string
+  inspection_status_display: string
+  viewed_at?: string | null
+  signed_at?: string | null
+  uploaded_at?: string | null
+  verified_at?: string | null
+  is_complete: boolean
+}
+
 type BackendClient = {
   id: number | string
   code: string
@@ -31,6 +46,7 @@ type BackendClient = {
   business_registration?: string
   currency?: "USD" | "KES"
   documents?: BackendClientDocument[]
+  document_signing_requests?: BackendDocumentSigningRequest[]
 }
 
 type BackendInvoice = {
@@ -70,6 +86,20 @@ function mapClient(item: BackendClient): Client {
       file: document.file,
       uploaded_at: document.uploaded_at,
     })),
+    document_signing_requests: item.document_signing_requests?.map((request) => ({
+      id: request.id,
+      client: request.client,
+      token: request.token,
+      contract_status: request.contract_status,
+      inspection_status: request.inspection_status,
+      contract_status_display: request.contract_status_display,
+      inspection_status_display: request.inspection_status_display,
+      viewed_at: request.viewed_at,
+      signed_at: request.signed_at,
+      uploaded_at: request.uploaded_at,
+      verified_at: request.verified_at,
+      is_complete: request.is_complete,
+    })),
     createdAt: item.created_at || "", updatedAt: item.updated_at || "",
   }
 }
@@ -97,8 +127,7 @@ function toBackendPayload(payload: ClientPayload) {
   }
 
   const hasFiles = Boolean(
-    payload.drivers_license_file || payload.insurance_file || payload.dot_file ||
-    payload.signed_contract_file || payload.inspection_report_file
+    payload.drivers_license_file || payload.insurance_file || payload.dot_file
   )
 
   if (!hasFiles) return body
@@ -113,8 +142,6 @@ function toBackendPayload(payload: ClientPayload) {
   if (payload.drivers_license_file) formData.append("drivers_license_file", payload.drivers_license_file)
   if (payload.insurance_file) formData.append("insurance_file", payload.insurance_file)
   if (payload.dot_file) formData.append("dot_file", payload.dot_file)
-  if (payload.signed_contract_file) formData.append("signed_contract_file", payload.signed_contract_file)
-  if (payload.inspection_report_file) formData.append("inspection_report_file", payload.inspection_report_file)
 
   return formData
 }
@@ -145,6 +172,9 @@ export const clientApi = {
     return mapClient(data)
   },
   async setStatus(id: string, status: ClientStatus): Promise<Client> { const { data } = await axiosClient.patch<BackendClient>(`/clients/${id}/`, { blacklisted: status === "Inactive" }); return mapClient(data) },
+  async sendDocuments(id: string, context?: { rental?: string; quotation?: string }): Promise<unknown> {
+    return axiosClient.post(`/clients/${id}/send-documents/`, context || {})
+  },
   async delete(id: string): Promise<void> { await axiosClient.delete(`/clients/${id}/`) },
   async getStatement(id: string): Promise<StatementLine[]> {
     const [invoiceResponse, paymentResponse] = await Promise.all([

@@ -19,6 +19,7 @@ function emptyLineItem(): DraftLineItem {
   return { key: crypto.randomUUID(), description: "", quantity: 1, rate: "", rateUnit: "day" }
 }
 function todayISO() { return new Date().toISOString().slice(0, 10) }
+function in7DaysISO() { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) }
 function in30DaysISO() {
   const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10)
 }
@@ -40,6 +41,8 @@ export function InvoiceFormDialog({
   const [clientPhone, setClientPhone] = useState("")
   const [date, setDate] = useState(todayISO())
   const [dueDate, setDueDate] = useState(in30DaysISO())
+  const [startDate, setStartDate] = useState(todayISO())
+  const [endDate, setEndDate] = useState(in7DaysISO())
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
   const [discountPercent, setDiscountPercent] = useState<number | "">("")
   const [vatPercent, setVatPercent] = useState(DEFAULT_VAT_PERCENT)
@@ -63,6 +66,8 @@ export function InvoiceFormDialog({
       setClientPhone(editing.clientPhone || "")
       setDate(editing.date?.slice(0, 10) || todayISO())
       setDueDate(editing.dueDate?.slice(0, 10) || in30DaysISO())
+      setStartDate(todayISO())
+      setEndDate(in7DaysISO())
       setItems(
         editing.lineItems.length
           ? editing.lineItems.map((li) => ({
@@ -78,6 +83,7 @@ export function InvoiceFormDialog({
     } else {
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setDate(todayISO()); setDueDate(in30DaysISO())
+      setStartDate(todayISO()); setEndDate(in7DaysISO())
       setItems([emptyLineItem()])
       setDiscountPercent(""); setVatPercent(DEFAULT_VAT_PERCENT)
       setNotes(""); setTerms("Payment due within 30 days of invoice date.")
@@ -85,7 +91,7 @@ export function InvoiceFormDialog({
     setError("")
   }, [open, editing])
 
-  const totals = useMemo(() => computeTotals(items, discountPercent, vatPercent), [items, discountPercent, vatPercent])
+  const totals = useMemo(() => computeTotals(items, discountPercent, vatPercent, startDate, endDate), [items, discountPercent, vatPercent, startDate, endDate])
 
   if (!open) return null
 
@@ -103,6 +109,7 @@ export function InvoiceFormDialog({
     if (!clientName.trim()) { setError("Client name is required."); return }
     if (items.some((it) => !it.description.trim())) { setError("Every line item needs a description."); return }
     if (new Date(dueDate) < new Date(date)) { setError("Due date can't be before the invoice date."); return }
+    if (new Date(endDate) < new Date(startDate)) { setError("Rental end date can't be before the start date."); return }
 
     const payload: InvoicePayload = {
       clientId: clientId || null,
@@ -197,7 +204,7 @@ export function InvoiceFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Invoice date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
@@ -206,6 +213,16 @@ export function InvoiceFormDialog({
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Due date</label>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rental start</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rental end</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
             </div>
           </div>
@@ -240,7 +257,7 @@ export function InvoiceFormDialog({
                     <option value="flat">flat</option>
                   </select>
                   <div className="col-span-1 flex items-center justify-end pt-2">
-                    <span className="text-xs font-semibold whitespace-nowrap">{kes(lineItemAmount(it))}</span>
+                    <span className="text-xs font-semibold whitespace-nowrap">{kes(lineItemAmount(it, startDate, endDate))}</span>
                   </div>
                   <button type="button" onClick={() => removeItem(it.key)}
                     className="col-span-1 justify-self-end p-1.5 rounded hover:bg-red-50 text-red-500">

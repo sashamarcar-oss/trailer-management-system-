@@ -74,8 +74,16 @@ class RentalViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="dispatch")
     def start_rental(self, request, pk=None):
         with transaction.atomic():
-            rental = Rental.objects.select_for_update().get(pk=pk)
+            rental = Rental.objects.select_for_update().select_related("client").get(pk=pk)
             self._transition(rental, ["reserved"], "active")
+            from apps.clients.models import ClientDocumentSigningRequest
+            documents_complete = ClientDocumentSigningRequest.objects.filter(
+                client=rental.client, rental=rental,
+                contract_status__in=["signed", "uploaded", "verified"],
+                inspection_status__in=["signed", "uploaded", "verified"],
+            ).exists()
+            if not documents_complete:
+                raise ValidationError({"documents": "Both the signed rental contract and pre-rental inspection report must be received before checkout."})
             inspection = request.data.get("inspection") or {}
             notes = str(inspection.get("condition_notes") or "").strip()
             if not notes:

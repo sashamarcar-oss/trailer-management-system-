@@ -149,7 +149,8 @@ export const quotationApi = {
   },
 
   async send(id: string): Promise<Quotation> {
-    return this.markStatus(id, "Sent")
+    const { data } = await axiosClient.post<BackendQuotation>(`/quotations/${id}/send/`)
+    return mapQuotation(data)
   },
 
   async markStatus(id: string, status: QuotationStatus): Promise<Quotation> {
@@ -169,5 +170,9 @@ export const quotationApi = {
   async get(id: string): Promise<Quotation> {
     const { data } = await axiosClient.get<BackendQuotation>(`/quotations/${id}/`)
     return mapQuotation(data)
+  },
+
+  async convert(id: string): Promise<{ invoiceId?: string; invoiceNumber?: string }> {
+    return this.convertToInvoice(id)
   },
 }

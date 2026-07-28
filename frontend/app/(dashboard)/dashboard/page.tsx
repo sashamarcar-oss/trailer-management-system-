@@ -32,16 +32,16 @@ const EXPENSE_COLORS = [COLORS.teal, COLORS.tealDeep, COLORS.navy, "#5FA8AE", "#
 const DEFAULT_DASHBOARD = {
   fleet: { available: 0, rented: 0, maintenance: 0, total: 0 },
   tripComputer: [
-    { label: "Monthly Revenue", value: "KES 0.00M", trend: "No data loaded", trendColor: COLORS.teal },
-    { label: "Outstanding", value: "KES 0.00M", trend: "No open invoices", trendColor: COLORS.amber },
-    { label: "Net Profit", value: "KES 0.00M", trend: "No data loaded", trendColor: COLORS.teal },
+    { label: "Monthly Revenue", value: "USD 0.00M", trend: "No data loaded", trendColor: COLORS.teal },
+    { label: "Outstanding", value: "USD 0.00M", trend: "No open invoices", trendColor: COLORS.amber },
+    { label: "Net Profit", value: "USD 0.00M", trend: "No data loaded", trendColor: COLORS.teal },
     { label: "Active Rentals", value: "0", trend: "No active rentals", trendColor: COLORS.danger },
   ],
   secondaryStats: [
     { label: "Total Clients", value: "0", trend: "Waiting for backend", icon: Users },
     { label: "Fleet Utilization", value: "0%", trend: "Waiting for backend", icon: Truck, bar: 0 },
     { label: "Pending Quotations", value: "0", trend: "Waiting for backend", icon: FileText },
-    { label: "Total Expenses", value: "KES 0.00M", trend: "Waiting for backend", icon: Wallet },
+    { label: "Total Expenses", value: "USD 0.00M", trend: "Waiting for backend", icon: Wallet },
   ],
   revenueTrend: [] as Array<{ month: string; revenue: number; expenses: number }>,
   utilization: [] as Array<{ type: string; pct: number }>,
@@ -50,16 +50,15 @@ const DEFAULT_DASHBOARD = {
 };
 
 function formatCurrency(value: number) {
-  const inMillions = value / 1000000;
-  return `KES ${inMillions.toFixed(2)}M`;
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
 }
 
 function formatCompact(value: number) {
-  return new Intl.NumberFormat("en-KE", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 }
 
 function monthLabel(date: string) {
-  return new Date(date).toLocaleDateString("en-KE", { month: "short" });
+  return new Date(date).toLocaleDateString("en-US", { month: "short" });
 }
 
 function relativeTime(dateString: string) {
@@ -332,7 +331,7 @@ export default function DashboardPage() {
           <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 text-right shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Today</p>
             <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-mono-data)", color: COLORS.tealDeep }}>
-              {new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              {new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
         </div>
@@ -388,7 +387,7 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold" style={{ color: COLORS.ink }}>Revenue vs expenses</p>
-              <p className="text-xs text-muted-foreground">KES millions over the last six months</p>
+              <p className="text-xs text-muted-foreground">USD over the last six months</p>
             </div>
             <div className="rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-teal-700">Live trend</div>
           </div>
@@ -439,7 +438,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
             <div className="absolute inset-x-0 top-0 flex flex-col items-center justify-center pointer-events-none" style={{ height: 200 }}>
               <p className="text-lg font-bold" style={{ fontFamily: "var(--font-display)", color: COLORS.ink }}>
-                {dashboardState.expenseBreakdown.length ? `KES ${Math.round((dashboardState.expenseBreakdown.reduce((sum, item) => sum + item.value, 0)) / 1000000)}M` : "KES 0.00M"}
+                {dashboardState.expenseBreakdown.length ? `USD ${Math.round((dashboardState.expenseBreakdown.reduce((sum, item) => sum + item.value, 0)) / 1000000)}M` : "USD 0.00M"}
               </p>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{Math.max(totalExpensePct, 0)}% accounted</p>
             </div>

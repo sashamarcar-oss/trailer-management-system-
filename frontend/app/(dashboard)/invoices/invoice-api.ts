@@ -19,6 +19,9 @@ type BackendInvoice = {
   balance?: number | string
   notes?: string
   terms?: string
+  sourceType?: "quotation" | "rental" | null
+  sourceId?: number | string | null
+  rental?: number | string | null
   created_at?: string
 }
 
@@ -60,6 +63,8 @@ function mapInvoice(item: BackendInvoice): Invoice {
     vatPercent: subtotal - discountAmount ? (vatAmount / (subtotal - discountAmount)) * 100 : 0, vatAmount,
     total, amountPaid, balance,
     payments: (item.payments || []) as unknown as Payment[], notes: item.notes, terms: item.terms,
+    sourceType: item.sourceType as Invoice["sourceType"] || null,
+    sourceId: item.sourceId == null ? null : String(item.sourceId),
     createdAt: item.created_at || "", updatedAt: item.created_at || "",
   }
 }

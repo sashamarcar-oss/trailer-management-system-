@@ -1,4 +1,6 @@
+import uuid
 from django.db import models
+from django.utils import timezone
 
 
 class Quotation(models.Model):
@@ -42,6 +44,46 @@ class Quotation(models.Model):
 
     def __str__(self):
         return self.quotation_number
+
+
+class QuotationResponseToken(models.Model):
+    ACTION_CHOICES = [
+        ("accept", "Accept"),
+        ("reject", "Reject"),
+    ]
+
+    quotation = models.ForeignKey(
+        Quotation,
+        on_delete=models.CASCADE,
+        related_name="response_tokens",
+    )
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["token"]), models.Index(fields=["quotation", "action"])]
+
+    @property
+    def is_used(self):
+        return self.used_at is not None
+
+    @property
+    def is_expired(self):
+        return self.expires_at <= timezone.now()
+
+    def mark_used(self, reason=""):
+        self.used_at = timezone.now()
+        if reason:
+            self.reason = reason
+        self.save(update_fields=["used_at", "reason"])
+
+    def __str__(self):
+        return f"{self.quotation.quotation_number} {self.action} token"
 
 
 class QuotationItem(models.Model):

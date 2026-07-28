@@ -1,5 +1,38 @@
 from rest_framework import serializers
-from .models import Client, ClientDocument, ClientNote
+from .models import Client, ClientDocument, ClientDocumentSigningRequest, DocumentSigningEvent, ClientNote
+
+
+class DocumentSigningEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentSigningEvent
+        fields = "__all__"
+
+
+class ClientDocumentSigningRequestSerializer(serializers.ModelSerializer):
+    events = DocumentSigningEventSerializer(many=True, read_only=True)
+    client_name = serializers.CharField(source="client.name", read_only=True)
+    rental_number = serializers.CharField(source="rental.rental_number", read_only=True, allow_null=True)
+    contract_status_display = serializers.CharField(source="get_contract_status_display", read_only=True)
+    inspection_status_display = serializers.CharField(source="get_inspection_status_display", read_only=True)
+    is_complete = serializers.BooleanField(read_only=True)
+    contract_pdf = serializers.FileField(read_only=True)
+    inspection_pdf = serializers.FileField(read_only=True)
+    signed_contract_file = serializers.FileField(read_only=True)
+    signed_inspection_file = serializers.FileField(read_only=True)
+
+    class Meta:
+        model = ClientDocumentSigningRequest
+        fields = [
+            "id", "client", "client_name", "rental", "rental_number", "quotation", "token", "contract_pdf",
+            "inspection_pdf", "signed_contract_file", "signed_inspection_file", "contract_status",
+            "contract_status_display", "inspection_status", "inspection_status_display", "viewed_at",
+            "signed_at", "uploaded_at", "verified_at", "notes", "created_at", "updated_at", "events", "is_complete"
+        ]
+        read_only_fields = [
+            "token", "client", "rental", "quotation", "contract_pdf", "inspection_pdf",
+            "signed_contract_file", "signed_inspection_file", "contract_status", "inspection_status",
+            "viewed_at", "signed_at", "uploaded_at", "verified_at",
+        ]
 
 
 class ClientDocumentSerializer(serializers.ModelSerializer):
@@ -18,13 +51,12 @@ class ClientNoteSerializer(serializers.ModelSerializer):
 class ClientSerializer(serializers.ModelSerializer):
     documents = ClientDocumentSerializer(many=True, read_only=True)
     client_notes = ClientNoteSerializer(many=True, read_only=True)
+    document_signing_requests = ClientDocumentSigningRequestSerializer(many=True, read_only=True)
     client_type_display = serializers.CharField(source="get_client_type_display", read_only=True)
     preferred_payment_terms_display = serializers.CharField(source="get_preferred_payment_terms_display", read_only=True)
     drivers_license_file = serializers.FileField(write_only=True, required=False, allow_null=True)
     insurance_file = serializers.FileField(write_only=True, required=False, allow_null=True)
     dot_file = serializers.FileField(write_only=True, required=False, allow_null=True)
-    signed_contract_file = serializers.FileField(write_only=True, required=False, allow_null=True)
-    inspection_report_file = serializers.FileField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Client
@@ -61,8 +93,6 @@ class ClientSerializer(serializers.ModelSerializer):
             "drivers_license_file": validated_data.pop("drivers_license_file", None),
             "insurance_file": validated_data.pop("insurance_file", None),
             "dot_file": validated_data.pop("dot_file", None),
-            "signed_contract_file": validated_data.pop("signed_contract_file", None),
-            "inspection_report_file": validated_data.pop("inspection_report_file", None),
         }
 
     def _create_client_documents(self, client, files):
@@ -70,8 +100,6 @@ class ClientSerializer(serializers.ModelSerializer):
             "drivers_license_file": "Driver's license",
             "insurance_file": "Insurance document",
             "dot_file": "DOT documentation",
-            "signed_contract_file": "Signed contract",
-            "inspection_report_file": "Signed inspection report",
         }
         for field_name, file_obj in files.items():
             if file_obj:

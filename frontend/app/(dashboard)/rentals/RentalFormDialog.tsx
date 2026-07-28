@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Plus, Trash2, X, AlertTriangle, CheckCircle2 } from "lucide-react"
 import type {
-  AvailabilityCheckResult, ClientLite, DriverLite, Rental, RentalPayload, TrailerLite,
+  AvailabilityCheckResult, ClientLite, Rental, RentalPayload, TrailerLite,
 } from "./types-and-api-notes"
 import { rentalApi, rentalLookups } from "./rental-api"
 import { computeRentalTotal, kes, lineTotal } from "./rental-utils"
@@ -42,8 +42,6 @@ export function RentalFormDialog({
   const [scheduledReturnDate, setScheduledReturnDate] = useState(in7DaysISO())
   const [pickupLocation, setPickupLocation] = useState("")
   const [returnLocation, setReturnLocation] = useState("")
-  const [deliveryRequired, setDeliveryRequired] = useState(false)
-  const [driverId, setDriverId] = useState("")
   const [depositAmount, setDepositAmount] = useState(0)
   const [lines, setLines] = useState<DraftLine[]>([emptyLine()])
   const [notes, setNotes] = useState("")
@@ -53,7 +51,6 @@ export function RentalFormDialog({
 
   const [clients, setClients] = useState<ClientLite[]>([])
   const [trailers, setTrailers] = useState<TrailerLite[]>([])
-  const [drivers, setDrivers] = useState<DriverLite[]>([])
 
   const [availability, setAvailability] = useState<AvailabilityCheckResult[]>([])
   const [checkingAvailability, setCheckingAvailability] = useState(false)
@@ -62,7 +59,6 @@ export function RentalFormDialog({
     if (!open) return
     rentalLookups.clients().then(setClients).catch(() => setClients([]))
     rentalLookups.trailers().then(setTrailers).catch(() => setTrailers([]))
-    rentalLookups.drivers().then(setDrivers).catch(() => setDrivers([]))
   }, [open])
 
   useEffect(() => {
@@ -76,8 +72,6 @@ export function RentalFormDialog({
       setScheduledReturnDate(editing.scheduledReturnDate?.slice(0, 10) || in7DaysISO())
       setPickupLocation(editing.pickupLocation || "")
       setReturnLocation(editing.returnLocation || "")
-      setDeliveryRequired(editing.deliveryRequired)
-      setDriverId(editing.driverId || "")
       setDepositAmount(editing.depositAmount || 0)
       setLines(
         editing.trailers.length
@@ -93,7 +87,6 @@ export function RentalFormDialog({
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setPickupDate(todayISO()); setScheduledReturnDate(in7DaysISO())
       setPickupLocation(""); setReturnLocation("")
-      setDeliveryRequired(false); setDriverId("")
       setDepositAmount(0)
       setLines([emptyLine()])
       setNotes("")
@@ -164,8 +157,9 @@ export function RentalFormDialog({
       pickupDate, scheduledReturnDate,
       pickupLocation: pickupLocation.trim() || undefined,
       returnLocation: returnLocation.trim() || undefined,
-      deliveryRequired,
-      driverId: deliveryRequired ? driverId : null,
+      // Rentals are always collected and returned by the client.
+      deliveryRequired: false,
+      driverId: null,
       depositAmount: Number(depositAmount) || 0,
       notes: notes.trim() || undefined,
       terms: terms.trim() || undefined,
@@ -272,21 +266,9 @@ export function RentalFormDialog({
             </div>
           </div>
 
-          {/* Delivery / driver */}
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={deliveryRequired} onChange={(e) => setDeliveryRequired(e.target.checked)} />
-              Company delivers / collects (assign a driver)
-            </label>
-            {deliveryRequired && (
-              <select value={driverId} onChange={(e) => setDriverId(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-input bg-card text-sm">
-                <option value="">Select driver…</option>
-                {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            )}
-            {!deliveryRequired && <span className="text-xs text-muted-foreground">Client will self-collect and self-return.</span>}
-          </div>
+          <p className="rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs text-teal-800">
+            The client will pick up the rental and return it to the agreed location.
+          </p>
 
           {/* Trailers */}
           <div>

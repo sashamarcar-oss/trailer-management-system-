@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.shortcuts import redirect
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -18,6 +20,10 @@ User = get_user_model()
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Keep browser visits out of the JSON-only JWT endpoint."""
+        return redirect(f"{settings.FRONTEND_BASE_URL.rstrip('/')}/login")
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)

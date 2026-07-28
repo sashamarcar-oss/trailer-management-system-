@@ -2,10 +2,6 @@ import axios from "axios";
 import {
   Paginated, Trailer, Client, Expense, Rental, Quotation, Invoice, AuditLog, Notification,
 } from "@/types";
-import {
-  mockTrailers, mockClients, mockExpenses, mockRentals, mockQuotations, mockInvoices,
-} from "@/lib/mock-data";
-
 /* ------------------------------------------------------------------ */
 /* Low-level axios client — JWT auth, refresh-on-401                  */
 /* ------------------------------------------------------------------ */
@@ -91,39 +87,13 @@ function normalizeExpenseResponse<T extends Record<string, any>>(item: T): T {
 
 function createResource<T extends { id: string }>(
   path: string,
-  mockData: T[],
   options?: {
     requestMapper?: (payload: Partial<T>) => any;
     responseMapper?: (item: any) => any;
   }
 ) {
-  let cache = [...mockData];
-
-  async function safeGet<TData>(fn: () => Promise<TData>): Promise<TData> {
-    if (useMockFallback) {
-      try {
-        return await fn();
-      } catch {
-        throw new Error("Backend unavailable");
-      }
-    }
-    return await fn();
-  }
-
   return {
     async list(params?: Record<string, string>): Promise<Paginated<T>> {
-      if (useMockFallback) {
-        try {
-          const { data } = await axiosClient.get<Paginated<T>>(`/${path}/`, { params });
-          return {
-            ...data,
-            results: options?.responseMapper ? data.results.map(options.responseMapper) : data.results,
-          };
-        } catch {
-          return paginate(cache);
-        }
-      }
-
       const { data } = await axiosClient.get<Paginated<T>>(`/${path}/`, { params });
       return {
         ...data,
@@ -131,69 +101,24 @@ function createResource<T extends { id: string }>(
       };
     },
     async retrieve(id: string): Promise<T | undefined> {
-      if (useMockFallback) {
-        try {
-          const { data } = await axiosClient.get<T>(`/${path}/${id}/`);
-          return options?.responseMapper ? options.responseMapper(data) : data;
-        } catch {
-          return cache.find((item) => item.id === id);
-        }
-      }
-
       const { data } = await axiosClient.get<T>(`/${path}/${id}/`);
       return options?.responseMapper ? options.responseMapper(data) : data;
     },
     async create(payload: Partial<T>): Promise<T> {
-      if (useMockFallback) {
-        try {
-          const mappedPayload = options?.requestMapper ? options.requestMapper(payload) : payload;
-          const { data } = await axiosClient.post<T>(`/${path}/`, mappedPayload);
-          cache = [data, ...cache];
-          return options?.responseMapper ? options.responseMapper(data) : data;
-        } catch {
-          const record = payload as T;
-          cache = [record, ...cache];
-          return record;
-        }
-      }
-
       const mappedPayload = options?.requestMapper ? options.requestMapper(payload) : payload;
       const { data } = await axiosClient.post<T>(`/${path}/`, mappedPayload);
       return options?.responseMapper ? options.responseMapper(data) : data;
     },
     async update(id: string, payload: Partial<T>): Promise<T> {
-      if (useMockFallback) {
-        try {
-          const mappedPayload = options?.requestMapper ? options.requestMapper(payload) : payload;
-          const { data } = await axiosClient.patch<T>(`/${path}/${id}/`, mappedPayload);
-          cache = cache.map((item) => (item.id === id ? data : item));
-          return options?.responseMapper ? options.responseMapper(data) : data;
-        } catch {
-          cache = cache.map((item) => (item.id === id ? { ...item, ...payload } : item));
-          return cache.find((item) => item.id === id) as T;
-        }
-      }
-
       const mappedPayload = options?.requestMapper ? options.requestMapper(payload) : payload;
       const { data } = await axiosClient.patch<T>(`/${path}/${id}/`, mappedPayload);
       return options?.responseMapper ? options.responseMapper(data) : data;
     },
     async remove(id: string): Promise<void> {
-      if (useMockFallback) {
-        try {
-          await axiosClient.delete(`/${path}/${id}/`);
-        } finally {
-          cache = cache.filter((item) => item.id !== id);
-        }
-        return;
-      }
-
       await axiosClient.delete(`/${path}/${id}/`);
     },
   };
 }
-
-const useMockFallback = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 function paginate<T>(items: T[]): Paginated<T> {
   return { count: items.length, next: null, previous: null, results: items };
@@ -221,17 +146,17 @@ export const api = {
       return data;
     },
   },
-  trailers: createResource<Trailer>("trailers", mockTrailers, {
+  trailers: createResource<Trailer>("trailers", {
     requestMapper: normalizeTrailerRequest,
     responseMapper: normalizeTrailerResponse,
   }),
-  clients: createResource<Client>("clients", mockClients),
-  expenses: createResource<Expense>("expenses", mockExpenses, {
+  clients: createResource<Client>("clients"),
+  expenses: createResource<Expense>("expenses", {
     responseMapper: normalizeExpenseResponse,
   }),
-  rentals: createResource<Rental>("rentals", mockRentals),
-  quotations: createResource<Quotation>("quotations", mockQuotations),
-  invoices: createResource<Invoice>("invoices", mockInvoices),
+  rentals: createResource<Rental>("rentals"),
+  quotations: createResource<Quotation>("quotations"),
+  invoices: createResource<Invoice>("invoices"),
   auditLogs: {
     /** Audit logs are read-only and are served by the core Django app. */
     async list(params?: Record<string, string>): Promise<Paginated<AuditLog>> {

@@ -218,7 +218,7 @@ export default function InvoicesPage() {
 
   async function handlePaymentRecorded(invoice?: Invoice) {
     await load()
-    if (invoice?.status === "Paid") {
+    if (invoice?.status === "Paid" && invoice.sourceType !== "rental") {
       setPaidInvoice(invoice)
     }
   }
@@ -358,9 +358,6 @@ export default function InvoicesPage() {
       )}
 
       <InvoiceFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} onSave={handleSave} />
-      <RecordPaymentDialog invoice={payingInvoice} onClose={() => setPayingInvoice(null)} onRecorded={handlePaymentRecorded} />
-      <RecordPaymentDialog invoice={refundingInvoice} mode="refund" onClose={() => setRefundingInvoice(null)} onRecorded={load} />
-      <PaymentHistoryDialog invoice={historyInvoice} open={Boolean(historyInvoice)} onOpenChange={(open) => !open && setHistoryInvoice(null)} />
       <RecordPaymentDialog invoice={payingInvoice} onClose={() => setPayingInvoice(null)} onRecorded={handlePaymentRecorded} />
       <RecordPaymentDialog invoice={refundingInvoice} mode="refund" onClose={() => setRefundingInvoice(null)} onRecorded={load} />
       {paidInvoice && (

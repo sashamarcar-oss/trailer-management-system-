@@ -141,3 +141,8 @@ EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="allanochisekana@gmail.com")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+BACKEND_BASE_URL = config("BACKEND_BASE_URL", default="http://localhost:8000")
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:3000")
+QUOTATION_RESPONSE_TOKEN_TTL_HOURS = config("QUOTATION_RESPONSE_TOKEN_TTL_HOURS", default=72, cast=int)

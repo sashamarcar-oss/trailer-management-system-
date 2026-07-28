@@ -29,6 +29,21 @@ export interface ClientDocument {
   uploaded_at: string
 }
 
+export interface ClientDocumentSigningRequest {
+  id: number
+  client: number | string
+  token: string
+  contract_status: string
+  inspection_status: string
+  contract_status_display: string
+  inspection_status_display: string
+  viewed_at?: string | null
+  signed_at?: string | null
+  uploaded_at?: string | null
+  verified_at?: string | null
+  is_complete: boolean
+}
+
 export interface Client {
   id: string
   code: string
@@ -45,6 +60,7 @@ export interface Client {
   passport?: string
   currency?: "USD" | "KES"
   documents?: ClientDocument[]
+  document_signing_requests?: ClientDocumentSigningRequest[]
 
   status: ClientStatus
 
@@ -76,8 +92,6 @@ export interface ClientPayload {
   drivers_license_file?: File | null
   insurance_file?: File | null
   dot_file?: File | null
-  signed_contract_file?: File | null
-  inspection_report_file?: File | null
   credit_limit: number
   payment_terms_days?: number
   notes?: string
