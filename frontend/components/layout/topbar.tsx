@@ -40,7 +40,7 @@ function presentNotification(item: Notification): NotificationPresentation {
   return { title: `${recordName}${object} was ${action}.`, detail: `Action by ${actor}`, Icon };
 }
 
-export function Topbar() {
+export function Topbar({ title }: { title: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [dark, setDark] = useState(false);
@@ -124,7 +124,6 @@ export function Topbar() {
     return () => { active = false; window.clearTimeout(timer); };
   }, [query]);
 
-  const label = pathname?.split("/").filter(Boolean).pop() || "dashboard";
   const unreadNotificationCount = notifications.filter((item) => !seenNotificationIds.includes(item.id)).length;
   const visibleNotifications = notifications.filter((item) => !clearedNotificationIds.includes(item.id));
   const markAllNotificationsRead = () => setSeenNotificationIds((seen) => Array.from(new Set([...seen, ...notifications.map((item) => item.id)])));
@@ -139,7 +138,7 @@ export function Topbar() {
       <div className="flex items-center gap-2 min-w-0">
         <p className="text-xs text-muted-foreground">Modules</p>
         <ChevronDown size={13} className="text-muted-foreground" />
-        <p className="text-sm font-medium capitalize truncate">{label}</p>
+        <p className="text-sm font-medium capitalize truncate">{title}</p>
       </div>
 
       <div className="hidden sm:flex relative items-center gap-2 px-3 py-2 rounded-lg flex-1 max-w-sm bg-background border border-border">
