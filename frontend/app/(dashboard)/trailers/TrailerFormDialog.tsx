@@ -272,14 +272,14 @@ export function TrailerFormDialog({
                 <label className={LABEL}>Yard / location</label>
                 <input value={form.yard_location} onChange={set("yard_location")} className={FIELD} placeholder="Nairobi Yard" />
               </div>
-              <div>
+              {/* <div>
                 <label className={LABEL}>GPS latitude</label>
                 <input type="number" step="0.000001" value={form.gps_lat} onChange={set("gps_lat")} className={FIELD} placeholder="-1.286389" />
               </div>
               <div>
                 <label className={LABEL}>GPS longitude</label>
                 <input type="number" step="0.000001" value={form.gps_lng} onChange={set("gps_lng")} className={FIELD} placeholder="36.817223" />
-              </div>
+              </div> */}
             </div>
           </div>
 
