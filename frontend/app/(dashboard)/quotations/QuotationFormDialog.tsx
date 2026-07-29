@@ -12,11 +12,11 @@ type DraftLineItem = {
   description: string
   quantity: number | ""
   rate: number | ""
-  rateUnit: "day" | "week" | "month" | "flat"
+  rateUnit: "month" | "flat"
 }
 
 function emptyLineItem(): DraftLineItem {
-  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: "", rateUnit: "day" }
+  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: 500, rateUnit: "month" }
 }
 
 function todayISO() {
@@ -51,7 +51,11 @@ export function QuotationFormDialog({
   const [issueDate, setIssueDate] = useState(todayISO())
   const [expiryDate, setExpiryDate] = useState(in14DaysISO())
   const [startDate, setStartDate] = useState(todayISO())
-  const [endDate, setEndDate] = useState(in7DaysISO())
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date()
+    d.setMonth(d.getMonth() + 1)
+    return d.toISOString().slice(0, 10)
+  })
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
   const [discountPercent, setDiscountPercent] = useState<number | "">("")
   const [vatPercent, setVatPercent] = useState(0)
@@ -91,9 +95,9 @@ export function QuotationFormDialog({
               key: li.id || crypto.randomUUID(),
               trailerId: li.trailerId,
               description: li.description,
-              quantity: li.quantity,
-              rate: li.rate,
-              rateUnit: li.rateUnit,
+              quantity: Math.max(1, li.quantity),
+              rate: li.rate || 500,
+              rateUnit: li.rateUnit === "flat" ? "flat" : "month",
             }))
           : [emptyLineItem()],
       )
@@ -104,7 +108,8 @@ export function QuotationFormDialog({
     } else {
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setIssueDate(todayISO()); setExpiryDate(in14DaysISO())
-      setStartDate(todayISO()); setEndDate(in7DaysISO())
+      setStartDate(todayISO());
+      const d = new Date(); d.setMonth(d.getMonth() + 1); setEndDate(d.toISOString().slice(0, 10))
       setItems([emptyLineItem()])
       setDiscountPercent(""); setVatPercent(0)
       setNotes("")
@@ -131,8 +136,8 @@ export function QuotationFormDialog({
     updateItem(key, {
       trailerId: trailerId || null,
       description: t?.name || "",
-      rate: t?.defaultRate ?? 0,
-      rateUnit: t?.defaultRateUnit ?? "day",
+      rate: t?.defaultRate ?? 500,
+      rateUnit: t?.defaultRateUnit ?? "month",
     })
   }
 
@@ -310,8 +315,6 @@ export function QuotationFormDialog({
                     onChange={(e) => updateItem(it.key, { rateUnit: e.target.value as DraftLineItem["rateUnit"] })}
                     className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs"
                   >
-                    <option value="day">per day</option>
-                    <option value="week">per week</option>
                     <option value="month">per month</option>
                     <option value="flat">flat</option>
                   </select>

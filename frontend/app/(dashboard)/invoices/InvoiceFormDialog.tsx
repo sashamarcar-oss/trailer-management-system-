@@ -5,6 +5,8 @@ import { Plus, Trash2, X } from "lucide-react"
 import { api } from "@/lib/api"
 import type { ClientLite, Invoice, InvoicePayload } from "./types-and-api-notes"
 import { DEFAULT_VAT_PERCENT, computeTotals, kes, lineItemAmount } from "./invoice-utils"
+import { rentalLookups } from "../rentals/rental-api"
+import type { TrailerLite } from "../rentals/types-and-api-notes"
 
 type DraftLineItem = {
   key: string
@@ -12,16 +14,15 @@ type DraftLineItem = {
   description: string
   quantity: number | ""
   rate: number | ""
-  rateUnit: "day" | "week" | "month" | "flat"
+  rateUnit: "month" | "flat"
 }
 
 function emptyLineItem(): DraftLineItem {
-  return { key: crypto.randomUUID(), description: "", quantity: 1, rate: "", rateUnit: "day" }
+  return { key: crypto.randomUUID(), trailerId: null, description: "", quantity: 1, rate: 500, rateUnit: "month" }
 }
 function todayISO() { return new Date().toISOString().slice(0, 10) }
-function in7DaysISO() { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) }
 function in30DaysISO() {
-  const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10)
+  const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10)
 }
 
 export function InvoiceFormDialog({
@@ -42,7 +43,7 @@ export function InvoiceFormDialog({
   const [date, setDate] = useState(todayISO())
   const [dueDate, setDueDate] = useState(in30DaysISO())
   const [startDate, setStartDate] = useState(todayISO())
-  const [endDate, setEndDate] = useState(in7DaysISO())
+  const [endDate, setEndDate] = useState(in30DaysISO())
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
   const [discountPercent, setDiscountPercent] = useState<number | "">("")
   const [vatPercent, setVatPercent] = useState(DEFAULT_VAT_PERCENT)
@@ -51,10 +52,12 @@ export function InvoiceFormDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [clients, setClients] = useState<ClientLite[]>([])
+  const [trailers, setTrailers] = useState<TrailerLite[]>([])
 
   useEffect(() => {
     if (!open) return
     api.clients?.list?.().then((res: { results: ClientLite[] }) => setClients(res.results)).catch(() => setClients([]))
+    rentalLookups.trailers().then(setTrailers).catch(() => setTrailers([]))
   }, [open])
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export function InvoiceFormDialog({
       setDate(editing.date?.slice(0, 10) || todayISO())
       setDueDate(editing.dueDate?.slice(0, 10) || in30DaysISO())
       setStartDate(todayISO())
-      setEndDate(in7DaysISO())
+      setEndDate(in30DaysISO())
       setItems(
         editing.lineItems.length
           ? editing.lineItems.map((li) => ({
@@ -83,7 +86,7 @@ export function InvoiceFormDialog({
     } else {
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
       setDate(todayISO()); setDueDate(in30DaysISO())
-      setStartDate(todayISO()); setEndDate(in7DaysISO())
+      setStartDate(todayISO()); setEndDate(in30DaysISO())
       setItems([emptyLineItem()])
       setDiscountPercent(""); setVatPercent(DEFAULT_VAT_PERCENT)
       setNotes(""); setTerms("Payment due within 30 days of invoice date.")
@@ -103,11 +106,36 @@ export function InvoiceFormDialog({
   }
   function addItem() { setItems((prev) => [...prev, emptyLineItem()]) }
 
+  // Selecting a trailer links it (trailerId) and fills the description from the
+  // trailer's name, but the description stays editable. Picking "Custom item"
+  // clears the link so the row is a free-text line item again.
+  function pickTrailer(key: string, trailerId: string) {
+    if (!trailerId) {
+      updateItem(key, { trailerId: null })
+      return
+    }
+    const t = trailers.find((tr) => tr.id === trailerId)
+    setItems((prev) =>
+      prev.map((it) =>
+        it.key === key
+          ? {
+              ...it,
+              trailerId,
+              description: t?.name || it.description,
+              rate: it.rate ? it.rate : (t?.defaultRate ?? 500),
+            }
+          : it,
+      ),
+    )
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
     if (!clientName.trim()) { setError("Client name is required."); return }
     if (items.some((it) => !it.description.trim())) { setError("Every line item needs a description."); return }
+    if (items.some((it) => !it.quantity || Number(it.quantity) < 1)) { setError("Every line item needs a quantity of at least 1."); return }
+    if (items.some((it) => !it.rate || Number(it.rate) <= 0)) { setError("Every line item needs a rate greater than zero."); return }
     if (new Date(dueDate) < new Date(date)) { setError("Due date can't be before the invoice date."); return }
     if (new Date(endDate) < new Date(startDate)) { setError("Rental end date can't be before the start date."); return }
 
@@ -236,33 +264,43 @@ export function InvoiceFormDialog({
             </div>
             <div className="space-y-2">
               {items.map((it) => (
-                <div key={it.key} className="grid grid-cols-12 gap-2 items-start p-2 rounded-lg border border-border">
-                  <input
-                    value={it.description} onChange={(e) => updateItem(it.key, { description: e.target.value })}
-                    placeholder="Description" className="col-span-4 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
-                  <input
-                    type="number" min={0} value={it.quantity}
-                    onChange={(e) => updateItem(it.key, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
-                    className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
-                  <input
-                    type="number" min={0} value={it.rate}
-                    onChange={(e) => updateItem(it.key, { rate: e.target.value === "" ? "" : Number(e.target.value) })}
-                    className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
-                  <select
-                    value={it.rateUnit} onChange={(e) => updateItem(it.key, { rateUnit: e.target.value as DraftLineItem["rateUnit"] })}
-                    className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs">
-                    <option value="day">per day</option>
-                    <option value="week">per week</option>
-                    <option value="month">per month</option>
-                    <option value="flat">flat</option>
-                  </select>
-                  <div className="col-span-1 flex items-center justify-end pt-2">
-                    <span className="text-xs font-semibold whitespace-nowrap">{kes(lineItemAmount(it, startDate, endDate))}</span>
+                <div key={it.key} className="p-2 rounded-lg border border-border space-y-2">
+                  <div className="grid grid-cols-12 gap-2 items-start">
+                    <select
+                      value={it.trailerId || ""}
+                      onChange={(e) => pickTrailer(it.key, e.target.value)}
+                      className="col-span-4 px-2 py-2 rounded-lg border border-input bg-card text-xs"
+                    >
+                      <option value="">— Custom item —</option>
+                      {trailers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <input
+                      value={it.description} onChange={(e) => updateItem(it.key, { description: e.target.value })}
+                      placeholder="Description" className="col-span-8 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
                   </div>
-                  <button type="button" onClick={() => removeItem(it.key)}
-                    className="col-span-1 justify-self-end p-1.5 rounded hover:bg-red-50 text-red-500">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="grid grid-cols-12 gap-2 items-center">
+                    <input
+                      type="number" min={1} value={it.quantity}
+                      onChange={(e) => updateItem(it.key, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
+                      className="col-span-3 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
+                    <input
+                      type="number" min={0} value={it.rate}
+                      onChange={(e) => updateItem(it.key, { rate: e.target.value === "" ? "" : Number(e.target.value) })}
+                      className="col-span-3 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
+                    <select
+                      value={it.rateUnit} onChange={(e) => updateItem(it.key, { rateUnit: e.target.value as DraftLineItem["rateUnit"] })}
+                      className="col-span-3 px-2 py-2 rounded-lg border border-input bg-card text-xs">
+                      <option value="month">per month</option>
+                      <option value="flat">flat</option>
+                    </select>
+                    <div className="col-span-2 flex items-center justify-end">
+                      <span className="text-xs font-semibold whitespace-nowrap">{kes(lineItemAmount(it, startDate, endDate))}</span>
+                    </div>
+                    <button type="button" onClick={() => removeItem(it.key)}
+                      className="col-span-1 justify-self-end p-1.5 rounded hover:bg-red-50 text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

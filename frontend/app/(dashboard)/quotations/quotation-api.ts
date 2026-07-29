@@ -41,16 +41,21 @@ function normalizeStatus(status: string): QuotationStatus {
 
 function mapQuotation(item: BackendQuotation): Quotation {
   const lineItems = (item.items || []).map((lineItem) => {
-    const quantity = Number(lineItem.duration_days || 1)
+    // NOTE: `duration_days` / `rate_per_day` are just the backend's generic field
+    // names — for trailer rentals we store them as months / rate-per-month directly
+    // (no unit conversion), so subtotal (duration * rate) is always exact.
+    const quantity = Math.max(1, Number(lineItem.duration_days || 1))
     const rate = numberValue(lineItem.rate_per_day)
+    const total = numberValue(lineItem.subtotal) || quantity * rate
+    const isRental = lineItem.trailer != null
     return {
       id: String(lineItem.id),
       trailerId: lineItem.trailer == null ? null : String(lineItem.trailer),
       description: lineItem.description || (lineItem.trailer == null ? "Trailer rental" : `Trailer ${lineItem.trailer}`),
       quantity,
       rate,
-      rateUnit: "day" as const,
-      amount: numberValue(lineItem.subtotal) || quantity * rate,
+      rateUnit: isRental ? "month" as const : "flat" as const,
+      amount: total,
     }
   })
   const subtotal = lineItems.reduce((sum, lineItem) => sum + lineItem.amount, 0)
@@ -97,8 +102,10 @@ function toBackendPayload(payload: QuotationPayload) {
     items: payload.lineItems.map((lineItem) => ({
       trailer: lineItem.trailerId,
       description: lineItem.description,
-      duration_days: lineItem.rateUnit === "week" ? lineItem.quantity * 7 : lineItem.rateUnit === "month" ? lineItem.quantity * 30 : lineItem.quantity,
-      rate_per_day: lineItem.rate,
+      // Store quantity/rate as-is (months / rate-per-month) — no day conversion,
+      // so duration_days * rate_per_day on the backend equals quantity * rate exactly.
+      duration_days: lineItem.quantity,
+      rate_per_day: Number(lineItem.rate),
     })),
   }
 }
@@ -142,7 +149,7 @@ export const quotationApi = {
       items: quotation.lineItems.map((lineItem) => ({
         trailer: lineItem.trailerId,
         duration_days: lineItem.quantity,
-        rate_per_day: lineItem.rate,
+        rate_per_day: Number(lineItem.rate),
       })),
     })
     return mapQuotation(data)

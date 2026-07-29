@@ -56,14 +56,24 @@ function mapInspection(item: BackendInspection): InspectionRecord {
   }
 }
 
+function monthsBetween(pickupDate: string, returnDate: string) {
+  const start = new Date(pickupDate)
+  const end = new Date(returnDate)
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1
+  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000))
+  return Math.max(1, Math.ceil(days / 30))
+}
+
 function mapRental(item: BackendRental): Rental {
   const rate = numberValue(item.rate)
   const total = numberValue(item.total) || rate - numberValue(item.discount) + numberValue(item.tax)
   const inspections = item.inspections || []
+  const months = monthsBetween(item.pickup_date, item.return_date)
+  const monthlyRate = months ? rate / months : rate
   return {
     id: String(item.id), rentalNumber: item.rental_number, clientId: String(item.client),
     clientName: item.client_name || `Client ${item.client}`, quotationId: item.quotation == null ? null : String(item.quotation),
-    trailers: [{ id: `${item.id}-${item.trailer}`, trailerId: String(item.trailer), trailerName: item.trailer_number || `Trailer ${item.trailer}`, rate, rateUnit: "flat", quantity: 1 }],
+    trailers: [{ id: `${item.id}-${item.trailer}`, trailerId: String(item.trailer), trailerName: item.trailer_number || `Trailer ${item.trailer}`, rate: monthlyRate, rateUnit: "month", quantity: 1 }],
     pickupDate: item.pickup_date, scheduledReturnDate: item.return_date, actualReturnDate: item.actual_return_date,
     pickupLocation: item.pickup_location, returnLocation: item.dropoff_location, deliveryRequired: Boolean(item.dropoff_location),
     driverId: null, driverName: null, status: item.status === "completed" ? "Completed" : item.status === "returned" ? "Returned" : item.status === "cancelled" ? "Cancelled" : item.status === "active" ? "Active" : item.status === "reserved" ? "Reserved" : "Draft",
@@ -78,7 +88,7 @@ function toBackendPayload(payload: RentalPayload) {
   if (payload.trailers.length !== 1) throw new Error("The backend currently supports one trailer per rental.")
   const trailer = payload.trailers[0]
   const days = Math.max(1, Math.ceil((new Date(payload.scheduledReturnDate).getTime() - new Date(payload.pickupDate).getTime()) / 86400000))
-  const units = trailer.rateUnit === "flat" ? 1 : trailer.rateUnit === "week" ? Math.ceil(days / 7) : trailer.rateUnit === "month" ? Math.ceil(days / 30) : days
+  const units = trailer.rateUnit === "flat" ? 1 : Math.max(1, Math.ceil(days / 30))
   return {
     client: payload.clientId, trailer: trailer.trailerId, quotation: payload.quotationId,
     pickup_date: payload.pickupDate, return_date: payload.scheduledReturnDate,

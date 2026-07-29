@@ -84,11 +84,18 @@ class ClientViewSet(viewsets.ModelViewSet):
             rental = Rental.objects.filter(pk=rental_id, client=client).first()
             if not rental:
                 raise ValidationError({"rental": "Choose a rental that belongs to this client."})
+            if rental.status != "reserved":
+                raise ValidationError({"detail": "Documents can only be sent for a reserved rental after payment has been recorded and before checkout is activated."})
+            from apps.invoices.models import Invoice
+            invoice = rental.invoices.order_by("-id").first()
+            if not invoice or invoice.balance > 0:
+                raise ValidationError({"detail": "Payment must be recorded before the client receives the rental documents."})
         if quotation_id:
             from apps.quotations.models import Quotation
             quotation = Quotation.objects.filter(pk=quotation_id, client=client).first()
             if not quotation:
                 raise ValidationError({"quotation": "Choose a quotation that belongs to this client."})
+            raise ValidationError({"detail": "Rental documents are only sent from rentals, not quotations."})
 
         # A resend is an auditable new delivery, while preserving previously
         # completed documents instead of silently reopening a signed agreement.

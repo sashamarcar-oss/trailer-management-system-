@@ -36,6 +36,22 @@ class QuotationSerializer(serializers.ModelSerializer):
         for field in ("client_name", "client_email", "client_phone"):
             if field in self.initial_data:
                 attrs[field] = self.initial_data[field]
+        # Enforce monthly rental policy when creating from scratch (not converting)
+        items = self.initial_data.get("items") or []
+        for idx, item in enumerate(items):
+            # require rate and duration
+            rate = item.get("rate") or item.get("rate_per_day") or 0
+            rate_unit = item.get("rateUnit") or item.get("rate_unit")
+            quantity = item.get("quantity") or item.get("duration_days") or 1
+            is_converted_backend_payload = rate_unit is None and item.get("rate_per_day") is not None and item.get("duration_days") is not None
+            # If the incoming UI uses months, we expect rateUnit 'month'. If the frontend has already
+            # converted the value to the backend model shape, accept the duration_days/rate_per_day pair.
+            if not is_converted_backend_payload and rate_unit not in (None, "month", "flat"):
+                raise serializers.ValidationError({"items": f"Line {idx + 1}: only month or flat pricing allowed for trailer rentals."})
+            if rate is None or float(rate) <= 0:
+                raise serializers.ValidationError({"items": f"Line {idx + 1}: monthly rate is required and must be > 0."})
+            if int(quantity) < 1:
+                raise serializers.ValidationError({"items": f"Line {idx + 1}: The minimum trailer rental period is one month."})
         return attrs
 
     def update(self, instance, validated_data):

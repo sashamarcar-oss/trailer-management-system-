@@ -25,7 +25,6 @@ export function ClientFormDialog({
   const [driversLicenseFile, setDriversLicenseFile] = useState<File | null>(null)
   const [insuranceFile, setInsuranceFile] = useState<File | null>(null)
   const [dotFile, setDotFile] = useState<File | null>(null)
-  const [creditLimit, setCreditLimit] = useState(0)
   const [paymentTermsDays, setPaymentTermsDays] = useState(30)
   const [notes, setNotes] = useState("")
   const [saving, setSaving] = useState(false)
@@ -40,14 +39,13 @@ export function ClientFormDialog({
       setAddress(editing.address || "")
       setPassport(editing.passport || "")
       setCurrency(editing.currency || "USD")
-      setCreditLimit(editing.credit_limit || 0)
       setPaymentTermsDays(editing.payment_terms_days ?? 30)
       setNotes(editing.notes || "")
     } else {
       setName(""); setContactPhone(""); setContactEmail("")
       setAddress(""); setPassport(""); setCurrency("USD")
       setDriversLicenseFile(null); setInsuranceFile(null); setDotFile(null)
-      setCreditLimit(0); setPaymentTermsDays(30); setNotes("")
+      setPaymentTermsDays(30); setNotes("")
     }
     setError("")
   }, [open, editing])
@@ -73,7 +71,6 @@ export function ClientFormDialog({
       drivers_license_file: driversLicenseFile,
       insurance_file: insuranceFile,
       dot_file: dotFile,
-      credit_limit: Number(creditLimit) || 0,
       payment_terms_days: Number(paymentTermsDays) || undefined,
       notes: notes.trim() || undefined,
     }
@@ -160,19 +157,6 @@ export function ClientFormDialog({
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Address</label>
             <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Credit limit ({currency})</label>
-              <input type="number" min={0} value={creditLimit} onChange={(e) => setCreditLimit(Number(e.target.value))}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Payment terms (days)</label>
-              <input type="number" min={0} value={paymentTermsDays} onChange={(e) => setPaymentTermsDays(Number(e.target.value))}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-card text-sm" />
-            </div>
           </div>
 
           {editing && (

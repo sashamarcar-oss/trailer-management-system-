@@ -47,7 +47,7 @@ function ActionsMenu({ rental, onAction }: { rental: Rental; onAction: (action: 
     { key: "view", label: "View", icon: <Eye className="w-3.5 h-3.5" /> },
     ...(canEdit(rental.status) ? [{ key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> }] : []),
     { key: "agreement", label: "Download agreement", icon: <Download className="w-3.5 h-3.5" /> },
-    ...(rental.status !== "Cancelled" && rental.status !== "Completed" ? [{ key: "documents", label: "Send documents to client", icon: <FileText className="w-3.5 h-3.5" /> }] : []),
+    ...(rental.status === "Reserved" ? [{ key: "documents", label: "Send documents to client", icon: <FileText className="w-3.5 h-3.5" /> }] : []),
     ...(rental.status === "Draft" ? [{ key: "confirm", label: "Confirm rental", icon: <CheckCircle2 className="w-3.5 h-3.5" /> }] : []),
     ...(rental.status === "Reserved" ? [{ key: "deposit", label: "Record deposit", icon: <Banknote className="w-3.5 h-3.5" /> }] : []),
     ...(canActivate(rental.status) ? [{ key: "checkout", label: "Check out (activate)", icon: <PlayCircle className="w-3.5 h-3.5" /> }] : []),
@@ -180,17 +180,17 @@ export default function RentalsPage() {
         }
         case "invoice": await rentalApi.generateInvoice(rental.id); await load(); return
         case "payment": {
-          const amount = window.prompt(`Record payment for ${rental.rentalNumber}. Amount (KES):`)
+          const amount = window.prompt(`Record payment for ${rental.rentalNumber}. Amount (USD):`)
           if (!amount) return
           await rentalApi.recordPayment(rental.id, Number(amount)); await load(); return
         }
         case "deposit": {
-          const amount = window.prompt(`Record security deposit for ${rental.rentalNumber}. Amount (KES):`)
+          const amount = window.prompt(`Record security deposit for ${rental.rentalNumber}. Amount (USD):`)
           if (!amount) return
           await rentalApi.recordDeposit(rental.id, Number(amount)); await load(); return
         }
         case "refund": {
-          const amount = window.prompt(`Refund deposit for ${rental.rentalNumber}. Amount (KES):`)
+          const amount = window.prompt(`Refund deposit for ${rental.rentalNumber}. Amount (USD):`)
           if (!amount) return
           await rentalApi.refundDeposit(rental.id, Number(amount)); await load(); return
         }

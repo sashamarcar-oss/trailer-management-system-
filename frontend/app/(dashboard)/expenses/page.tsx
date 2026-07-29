@@ -17,6 +17,16 @@ import { Expense, Paginated } from "@/types";
 import { DetailsDialog } from "@/components/ui/DetailsDialog";
 import { MainLayout } from "@/components/layout/main-layout";
 
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="text-2xl font-bold mt-3 text-foreground">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+    </div>
+  );
+}
+
 export default function ExpensesPage() {
   const [rows, setRows] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +67,10 @@ export default function ExpensesPage() {
   }
 
   const total = rows.reduce((sum, e) => sum + Number(e.amount), 0);
+  const approvedTotal = rows
+    .filter((e) => e.status === "Approved")
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+  const pendingApprovals = rows.filter((e) => e.status === "Pending").length;
 
   const columns: Column<Expense>[] = [
     { key: "id", label: "Expense #" },
@@ -106,6 +120,13 @@ export default function ExpensesPage() {
         actionLabel="Record expense"
         onAction={() => { setEditing(null); setFormOpen(true); }}
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatCard label="Total expenses" value={`KES ${total.toLocaleString()}`} sub="All recorded expenses" />
+        <StatCard label="Approved expenses" value={`KES ${approvedTotal.toLocaleString()}`} sub="Expenses approved for payment" />
+        <StatCard label="Pending approval" value={String(pendingApprovals)} sub="Expenses awaiting approval" />
+      </div>
+
       <Table columns={columns} rows={rows} loading={loading} getRowKey={(r) => r.id} />
 
       <ExpenseForm

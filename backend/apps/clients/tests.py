@@ -35,6 +35,42 @@ class ClientDocumentSigningTests(TestCase):
         self.assertEqual(request.contract_status, "sent")
         self.assertEqual(request.inspection_status, "sent")
 
+    def test_send_documents_for_reserved_rental_requires_payment(self):
+        client = Client.objects.create(
+            name="Acme Logistics",
+            contact_phone="0712345678",
+            email="client@example.com",
+            contact_person="Jane Doe",
+            country="Kenya",
+            created_by=self.user,
+        )
+        trailer = Trailer.objects.create(
+            trailer_number="TR-100",
+            registration_number="REG-100",
+            vin="VIN-100",
+            trailer_type="flatbed",
+            created_by=self.user,
+        )
+        rental = Rental.objects.create(
+            client=client,
+            trailer=trailer,
+            pickup_date="2026-01-01",
+            return_date="2026-01-05",
+            rate=500,
+            security_deposit=250,
+            status="reserved",
+            created_by=self.user,
+        )
+
+        response = self.client.post(
+            f"/api/clients/{client.id}/send-documents/",
+            {"rental": rental.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("payment", response.data["detail"].lower())
+
     def test_dispatch_is_blocked_until_both_documents_are_complete(self):
         client = Client.objects.create(
             name="Acme Logistics",

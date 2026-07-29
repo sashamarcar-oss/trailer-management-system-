@@ -34,17 +34,18 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         if not item or not item.trailer:
             raise ValidationError({"items": "Invoice must include a trailer item with a linked trailer to create a rental."})
 
+        months = max(1, int(item.quantity or 1))
         pickup_date = timezone.localdate()
-        duration_days = max(int(item.quantity or 1), 1)
-        return_date = pickup_date + timedelta(days=duration_days)
+        return_date = pickup_date + timedelta(days=months * 30)
 
         rental = Rental.objects.create(
             client=invoice.client,
             trailer=item.trailer,
             quotation=invoice.quotation,
+            rental_type="monthly",
             pickup_date=pickup_date,
             return_date=return_date,
-            rate=item.unit_price,
+            rate=item.unit_price * months,
             status="draft",
             created_by=request.user,
         )

@@ -6,15 +6,11 @@
  * field names with your actual backend.
  *
  * Confirmed with you:
- *   - credit limit is enforced as "warn but allow override" — see
- *     checkCreditWarning() in client-utils.ts, meant to be reused on the
- *     rental and invoice creation forms too (snippet at the bottom of
- *     this file shows how)
  *   - no KRA PIN / registration fields needed
  *   - status is a simple Active/Inactive toggle, not a multi-state workflow
  *
  * I kept your existing field names (code, client_type, contact_phone,
- * outstanding_balance, credit_limit, rating) rather than renaming them,
+ * outstanding_balance, rating) rather than renaming them,
  * and only added what's missing.
  */
 
@@ -64,7 +60,6 @@ export interface Client {
 
   status: ClientStatus
 
-  credit_limit: number
   outstanding_balance: number        // total owed across all invoices
   overdue_balance: number             // subset of outstanding_balance that's past due — the number that actually matters for collections
 
@@ -92,7 +87,6 @@ export interface ClientPayload {
   drivers_license_file?: File | null
   insurance_file?: File | null
   dot_file?: File | null
-  credit_limit: number
   payment_terms_days?: number
   notes?: string
 }
@@ -115,7 +109,7 @@ export interface Paginated<T> {
 
 // ── Add/merge into @/lib/api (api.clients) ────────────────────────────────
 //
-// api.clients.list(params?: { search?: string; status?: string; clientType?: string; overLimitOnly?: boolean; page?: number })
+// api.clients.list(params?: { search?: string; status?: string; clientType?: string; page?: number })
 //   => Promise<Paginated<Client>>
 // api.clients.get(id: string) => Promise<Client>
 // api.clients.create(payload: ClientPayload) => Promise<Client>
@@ -123,12 +117,3 @@ export interface Paginated<T> {
 // api.clients.setStatus(id: string, status: ClientStatus) => Promise<Client>
 // api.clients.delete(id: string) => Promise<void>                 // should probably be blocked server-side if the client has any history
 // api.clients.getStatement(id: string, params?: { from?: string; to?: string }) => Promise<StatementLine[]>
-//
-// ── Reusing the credit warning elsewhere ──────────────────────────────────
-// checkCreditWarning() in client-utils.ts is written to be imported into
-// the RentalFormDialog and InvoiceFormDialog you already have, e.g.:
-//
-//   import { checkCreditWarning } from "@/app/clients/client-utils"
-//   const warning = checkCreditWarning(selectedClient, newDocumentTotal)
-//   // if (warning) show an amber banner with warning.message and an
-//   // "I understand, proceed anyway" checkbox before allowing submit

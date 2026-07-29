@@ -31,7 +31,7 @@ export interface QuotationLineItem {
   description: string          // free text if no trailerId, else trailer name/spec
   quantity: number
   rate: number                 // rate per unit (see rateUnit)
-  rateUnit: "day" | "week" | "month" | "flat"
+  rateUnit: "month" | "flat"
   amount: number                // quantity * rate, computed client-side, sent to API
 }
 
@@ -92,7 +92,7 @@ export interface TrailerLite {
   id: string
   name: string          // e.g. "Flatbed 40ft - KAB 123X"
   defaultRate?: number
-  defaultRateUnit?: "day" | "week" | "month" | "flat"
+  defaultRateUnit?: "month" | "flat"
 }
 
 // ── Add/merge into @/lib/api (api.quotations) ───────────────────────────

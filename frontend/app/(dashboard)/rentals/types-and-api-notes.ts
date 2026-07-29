@@ -25,7 +25,7 @@ export type RentalStatus = "Draft" | "Reserved" | "Active" | "Returned" | "Compl
 // "Overdue" is derived (Active + past scheduledReturnDate), not a stored status —
 // see isOverdue() in rental-utils.ts. Store the real status as one of the above.
 
-export type RateUnit = "day" | "week" | "month" | "flat"
+export type RateUnit = "month" | "flat"
 
 export interface RentalTrailerLine {
   id: string

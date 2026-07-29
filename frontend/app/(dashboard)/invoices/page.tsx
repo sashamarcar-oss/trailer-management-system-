@@ -1,5 +1,5 @@
 "use client"
-
+import { getApiErrorMessage } from "@/lib/utils"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle, CheckCircle2, Copy, Download, Eye, FileText, MoreVertical,
@@ -392,8 +392,8 @@ export default function InvoicesPage() {
                       setInfoMessage(`Rental ${rentalId} created from ${paidInvoice.invoiceNumber}.`)
                       await load()
                     } catch (error) {
-                      setActionError("Unable to create rental from this invoice. Please try again.")
-                    } finally {
+  setActionError(getApiErrorMessage(error, "Unable to create rental from this invoice. Please try again."))
+} finally {
                       setCreatingRental(false)
                       setPaidInvoice(null)
                     }

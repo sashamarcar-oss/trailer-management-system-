@@ -44,7 +44,7 @@ function mapInvoice(item: BackendInvoice): Invoice {
     description: lineItem.description || "Invoice item",
     quantity: Number(lineItem.quantity || 1),
     rate: numberValue(lineItem.unit_price),
-    rateUnit: "flat" as const,
+    rateUnit: lineItem.trailer != null ? "month" as const : "flat" as const,
     amount: numberValue(lineItem.subtotal) || Number(lineItem.quantity || 1) * numberValue(lineItem.unit_price),
   }))
   const subtotal = lineItems.reduce((sum, lineItem) => sum + lineItem.amount, 0)

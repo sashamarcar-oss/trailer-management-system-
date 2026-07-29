@@ -13,15 +13,15 @@ type DraftLine = {
   trailerId: string
   trailerName: string
   rate: number
-  rateUnit: "day" | "week" | "month" | "flat"
+  rateUnit: "month" | "flat"
   quantity: number
 }
 
 function emptyLine(): DraftLine {
-  return { key: crypto.randomUUID(), trailerId: "", trailerName: "", rate: 0, rateUnit: "day", quantity: 1 }
+  return { key: crypto.randomUUID(), trailerId: "", trailerName: "", rate: 500, rateUnit: "month", quantity: 1 }
 }
 function todayISO() { return new Date().toISOString().slice(0, 10) }
-function in7DaysISO() { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) }
+function in30DaysISO() { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10) }
 
 export function RentalFormDialog({
   open,
@@ -39,7 +39,7 @@ export function RentalFormDialog({
   const [clientEmail, setClientEmail] = useState("")
   const [clientPhone, setClientPhone] = useState("")
   const [pickupDate, setPickupDate] = useState(todayISO())
-  const [scheduledReturnDate, setScheduledReturnDate] = useState(in7DaysISO())
+  const [scheduledReturnDate, setScheduledReturnDate] = useState(in30DaysISO())
   const [pickupLocation, setPickupLocation] = useState("")
   const [returnLocation, setReturnLocation] = useState("")
   const [depositAmount, setDepositAmount] = useState(0)
@@ -69,7 +69,7 @@ export function RentalFormDialog({
       setClientEmail(editing.clientEmail || "")
       setClientPhone(editing.clientPhone || "")
       setPickupDate(editing.pickupDate?.slice(0, 10) || todayISO())
-      setScheduledReturnDate(editing.scheduledReturnDate?.slice(0, 10) || in7DaysISO())
+      setScheduledReturnDate(editing.scheduledReturnDate?.slice(0, 10) || in30DaysISO())
       setPickupLocation(editing.pickupLocation || "")
       setReturnLocation(editing.returnLocation || "")
       setDepositAmount(editing.depositAmount || 0)
@@ -77,7 +77,9 @@ export function RentalFormDialog({
         editing.trailers.length
           ? editing.trailers.map((t) => ({
               key: t.id || crypto.randomUUID(), trailerId: t.trailerId, trailerName: t.trailerName,
-              rate: t.rate, rateUnit: t.rateUnit, quantity: t.quantity,
+              rate: t.rate,
+              rateUnit: t.rateUnit === "flat" ? "flat" : "month",
+              quantity: t.quantity,
             }))
           : [emptyLine()],
       )
@@ -85,7 +87,7 @@ export function RentalFormDialog({
       setTerms(editing.terms || "")
     } else {
       setClientId(""); setClientName(""); setClientEmail(""); setClientPhone("")
-      setPickupDate(todayISO()); setScheduledReturnDate(in7DaysISO())
+      setPickupDate(todayISO()); setScheduledReturnDate(in30DaysISO())
       setPickupLocation(""); setReturnLocation("")
       setDepositAmount(0)
       setLines([emptyLine()])
@@ -132,7 +134,7 @@ export function RentalFormDialog({
   function addLine() { setLines((prev) => [...prev, emptyLine()]) }
   function pickTrailer(key: string, trailerId: string) {
     const t = trailers.find((tr) => tr.id === trailerId)
-    updateLine(key, { trailerId, trailerName: t?.name || "", rate: t?.defaultRate ?? 0, rateUnit: t?.defaultRateUnit ?? "day" })
+    updateLine(key, { trailerId, trailerName: t?.name || "", rate: t?.defaultRate ?? 500, rateUnit: "month" })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -142,6 +144,12 @@ export function RentalFormDialog({
     if (!clientName.trim()) { setError("Client name is required."); return }
     if (lines.some((l) => !l.trailerId)) { setError("Select a trailer for every line."); return }
     if (new Date(scheduledReturnDate) < new Date(pickupDate)) { setError("Return date can't be before the pickup date."); return }
+    const minReturn = new Date(pickupDate)
+minReturn.setMonth(minReturn.getMonth() + 1)
+if (new Date(scheduledReturnDate) < minReturn) {
+  setError("Rentals must be booked for at least one month.")
+  return
+}
     if (conflicts.length > 0) {
       setError(`${conflicts.length} trailer(s) are already booked for these dates. Remove or reschedule them before saving.`)
       return
@@ -295,8 +303,6 @@ export function RentalFormDialog({
                         className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs" />
                       <select value={l.rateUnit} onChange={(e) => updateLine(l.key, { rateUnit: e.target.value as DraftLine["rateUnit"] })}
                         className="col-span-2 px-2 py-2 rounded-lg border border-input bg-card text-xs">
-                        <option value="day">per day</option>
-                        <option value="week">per week</option>
                         <option value="month">per month</option>
                         <option value="flat">flat</option>
                       </select>

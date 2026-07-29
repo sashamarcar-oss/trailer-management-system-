@@ -1,13 +1,21 @@
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import type { Invoice, InvoiceLineItem, InvoiceStatus } from "./types-and-api-notes"
-import { lineTotal } from "../rentals/rental-utils"
 
 export const DEFAULT_VAT_PERCENT = 16
 export const INVOICE_STATUSES: InvoiceStatus[] = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Void"]
 
 export function kes(value: number): string {
   return `USD ${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function durationInUnits(startDate?: string, endDate?: string, rateUnit?: string) {
+  if (rateUnit !== "month") return 1
+  const start = new Date(startDate ?? "")
+  const end = new Date(endDate ?? "")
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1
+  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000))
+  return Math.max(1, Math.ceil(days / 30))
 }
 
 export function lineItemAmount(
@@ -17,10 +25,8 @@ export function lineItemAmount(
 ): number {
   const quantity = Number(item.quantity || 0)
   const rate = Number(item.rate || 0)
-  if (startDate && endDate && item.rateUnit && item.rateUnit !== "flat") {
-    return lineTotal({ rate, rateUnit: item.rateUnit as "day" | "week" | "month" | "flat", quantity }, startDate, endDate)
-  }
-  return quantity * rate
+  const units = durationInUnits(startDate, endDate, item.rateUnit)
+  return quantity * rate * units
 }
 
 export function computeTotals(

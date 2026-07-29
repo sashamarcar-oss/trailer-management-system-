@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-  AlertCircle, Copy, Download, Eye, FileText, MoreVertical,
-  Pencil, Plus, Search, Send, Trash2, ArrowRightCircle, CheckCircle2, XCircle,
+  AlertCircle, Copy, Download, Eye, MoreVertical,
+  Pencil, Plus, Search, Send, Trash2, ArrowRightCircle, CheckCircle2, XCircle, FileText,
 } from "lucide-react"
 import { ModuleHeader } from "@/components/ui/ModuleHeader"
 import { Table, Column } from "@/components/ui/Table"
 import { Badge } from "@/components/ui/badge"
 import type { Paginated, Quotation, QuotationPayload, QuotationStatus } from "./types-and-api-notes"
 import { quotationApi } from "./quotation-api"
-import { clientApi } from "../clients/client-api"
 import {
   QUOTATION_STATUSES, canConvert, canDelete, canEdit, canMarkAcceptedRejected, canSend,
   exportQuotationPDF, exportQuotationsCSV, isExpiringSoon, kes,
@@ -48,7 +47,6 @@ function ActionsMenu({ quotation, onAction }: { quotation: Quotation; onAction: 
     { key: "duplicate", label: "Duplicate", icon: <Copy className="w-3.5 h-3.5" /> },
     { key: "pdf", label: "Download PDF", icon: <Download className="w-3.5 h-3.5" /> },
     ...(canSend(quotation.status) ? [{ key: "send", label: "Send to client", icon: <Send className="w-3.5 h-3.5" /> }] : []),
-    ...(quotation.clientId ? [{ key: "documents", label: "Send documents to client", icon: <Send className="w-3.5 h-3.5" /> }] : []),
     ...(canMarkAcceptedRejected(quotation.status)
       ? [
           { key: "accept", label: "Mark accepted", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
@@ -178,12 +176,6 @@ export default function QuotationsPage() {
         case "send": {
           await quotationApi.send(quotation.id)
           await load()
-          return
-        }
-        case "documents": {
-          if (!quotation.clientId) throw new Error("Link this quotation to a saved client before sending documents.")
-          await clientApi.sendDocuments(quotation.clientId, { quotation: quotation.id })
-          setInfoMessage(`Rental documents were sent to ${quotation.clientName}.`)
           return
         }
         case "accept": {

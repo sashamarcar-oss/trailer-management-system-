@@ -9,9 +9,7 @@ import { ModuleHeader } from "@/components/ui/ModuleHeader"
 import { Table, Column } from "@/components/ui/Table"
 import type { Client, ClientPayload, ClientStatus, Paginated, StatementLine } from "./types-and-api-notes"
 import { clientApi } from "./client-api"
-import {
-  availableCredit, creditUtilizationPercent, exportClientStatementPDF, exportClientsCSV, formatCurrency, isOverLimit, kes,
-} from "./client-utils"
+import { exportClientStatementPDF, exportClientsCSV, formatCurrency, kes } from "./client-utils"
 import { ClientFormDialog } from "./ClientFormDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
 import { MainLayout } from "@/components/layout/main-layout"
@@ -58,10 +56,10 @@ function ActionsMenu({ client, onAction }: { client: Client; onAction: (action: 
   }, [])
 
   const items: { key: string; label: string; icon: React.ReactNode; danger?: boolean }[] = [
-    { key: "view", label: "View profile", icon: <Eye className="w-3.5 h-3.5" /> },
-    { key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> },
-    { key: "documents", label: "Send documents to client", icon: <Send className="w-3.5 h-3.5" /> },
-    { key: "statement", label: "Download statement", icon: <ReceiptText className="w-3.5 h-3.5" /> },
+  { key: "view", label: "View profile", icon: <Eye className="w-3.5 h-3.5" /> },
+  { key: "edit", label: "Edit", icon: <Pencil className="w-3.5 h-3.5" /> },
+  // { key: "documents", label: "Send documents to client", icon: <Send className="w-3.5 h-3.5" /> },
+  { key: "statement", label: "Download statement", icon: <ReceiptText className="w-3.5 h-3.5" /> },
     client.status === "Active"
       ? { key: "deactivate", label: "Mark inactive", icon: <Ban className="w-3.5 h-3.5" />, danger: true }
       : { key: "activate", label: "Mark active", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
@@ -99,7 +97,6 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("All")
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "All">("All")
-  const [overLimitOnly, setOverLimitOnly] = useState(false)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
@@ -113,7 +110,6 @@ export default function ClientsPage() {
         search: search || undefined,
         status: statusFilter === "All" ? undefined : statusFilter,
         clientType: typeFilter === "All" ? undefined : typeFilter,
-        overLimitOnly: overLimitOnly || undefined,
         page,
       })
       setRows(res.results)
@@ -124,16 +120,14 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, statusFilter, typeFilter, overLimitOnly, page])
+  }, [search, statusFilter, typeFilter, page])
 
   useEffect(() => { load() }, [load])
-  useEffect(() => { setPage(1) }, [search, statusFilter, typeFilter, overLimitOnly])
+  useEffect(() => { setPage(1) }, [search, statusFilter, typeFilter])
 
   const stats = useMemo(() => {
     const totalOutstanding = rows.reduce((s, c) => s + c.outstanding_balance, 0)
-    const totalCreditExtended = rows.reduce((s, c) => s + c.credit_limit, 0)
-    const overLimitCount = rows.filter(isOverLimit).length
-    return { totalOutstanding, totalCreditExtended, overLimitCount }
+    return { totalOutstanding }
   }, [rows])
 
   async function handleAction(client: Client, action: string) {
@@ -178,28 +172,8 @@ export default function ClientsPage() {
     { key: "contact_phone", label: "Contact" },
     {
       key: "outstanding_balance", label: "Outstanding",
-      render: (r) => <span className={isOverLimit(r) ? "text-red-600 font-semibold" : ""}>{formatCurrency(r.outstanding_balance, r.currency || "USD")}</span>,
+      render: (r) => <span>{formatCurrency(r.outstanding_balance, r.currency || "USD")}</span>,
     },
-    {
-      key: "credit_limit", label: "Credit Limit / Available",
-      render: (r) => (
-        <div className="min-w-32">
-          <div className="flex justify-between text-xs">
-            <span>{formatCurrency(r.credit_limit, r.currency || "USD")}</span>
-            <span className={availableCredit(r) < 0 ? "text-red-600 font-semibold" : "text-muted-foreground"}>
-              {availableCredit(r) < 0 ? `${formatCurrency(Math.abs(availableCredit(r)), r.currency || "USD")} over` : `${formatCurrency(availableCredit(r), r.currency || "USD")} free`}
-            </span>
-          </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-            <div
-              className={`h-full rounded-full ${isOverLimit(r) ? "bg-red-500" : creditUtilizationPercent(r) > 80 ? "bg-amber-500" : "bg-teal-600"}`}
-              style={{ width: `${creditUtilizationPercent(r)}%` }}
-            />
-          </div>
-        </div>
-      ),
-    },
-    { key: "rating", label: "Rating", render: (r) => (r.rating ? `★ ${r.rating}` : "—") },
     { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
     { key: "actions", label: "", render: (r) => <ActionsMenu client={r} onAction={(action) => handleAction(r, action)} /> },
   ]
@@ -222,11 +196,9 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
         <StatCard label="Total Clients" value={String(count)} valueClass="text-blue-600" />
         <StatCard label="Total Outstanding" value={kes(stats.totalOutstanding)} valueClass="text-amber-600" />
-        <StatCard label="Credit Extended" value={kes(stats.totalCreditExtended)} />
-        <StatCard label="Over Credit Limit" value={String(stats.overLimitCount)} valueClass="text-red-600" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mt-4 p-3 rounded-xl border border-border bg-muted/30">
@@ -247,10 +219,6 @@ export default function ClientsPage() {
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
         </select>
-        <label className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-input bg-card cursor-pointer">
-          <input type="checkbox" checked={overLimitOnly} onChange={(e) => setOverLimitOnly(e.target.checked)} />
-          Over limit only
-        </label>
       </div>
 
       {actionError && (
@@ -274,7 +242,7 @@ export default function ClientsPage() {
                 <FileText className="w-10 h-10 text-muted-foreground/30" />
                 <p className="text-sm font-semibold text-foreground">No clients found</p>
                 <p className="text-xs text-muted-foreground max-w-xs">
-                  {search || statusFilter !== "All" || typeFilter !== "All" || overLimitOnly
+                  {search || statusFilter !== "All" || typeFilter !== "All"
                     ? "Try adjusting your filters."
                     : "Add your first client to get started."}
                 </p>
@@ -308,7 +276,6 @@ export default function ClientsPage() {
           { label: "Email", value: viewing.contact_email },
           { label: "Address", value: viewing.address },
           { label: "Currency", value: viewing.currency || "USD" },
-          { label: "Credit limit", value: formatCurrency(viewing.credit_limit, viewing.currency || "USD") },
           { label: "Outstanding", value: formatCurrency(viewing.outstanding_balance, viewing.currency || "USD") },
           { label: "Payment terms", value: `${viewing.payment_terms_days} days` },
           { label: "Documents", value: viewing.documents?.length ? (

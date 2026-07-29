@@ -16,9 +16,7 @@ export function durationInUnits(pickupDate: string, returnDate: string, unit: Re
   const end = new Date(returnDate)
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
   const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000))
-  if (unit === "day") return days
-  if (unit === "week") return days / 7
-  return days / 30
+  return Math.max(1, Math.ceil(days / 30))
 }
 
 export function lineTotal(

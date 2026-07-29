@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from .models import Invoice, InvoiceItem, Payment
 
@@ -46,6 +47,15 @@ class InvoiceSerializer(serializers.ModelSerializer):
         for field in ("client_name", "client_email", "client_phone"):
             if field in self.initial_data:
                 attrs[field] = self.initial_data[field]
+
+        items = self.initial_data.get("items") or []
+        for idx, item in enumerate(items):
+            quantity = int(item.get("quantity") or 0)
+            unit_price = Decimal(str(item.get("unit_price") or 0))
+            if quantity < 1:
+                raise serializers.ValidationError({"items": f"Line {idx + 1}: quantity must be at least 1."})
+            if unit_price <= 0:
+                raise serializers.ValidationError({"items": f"Line {idx + 1}: unit_price must be greater than zero."})
         return attrs
 
     def update(self, instance, validated_data):

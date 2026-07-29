@@ -31,7 +31,7 @@ export interface InvoiceLineItem {
   description: string
   quantity: number
   rate: number
-  rateUnit: "day" | "week" | "month" | "flat"
+  rateUnit: "month" | "flat"
   amount: number
 }
 

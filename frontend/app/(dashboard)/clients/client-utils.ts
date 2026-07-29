@@ -16,52 +16,13 @@ export function kes(value: number): string {
   return formatCurrency(value, "KES")
 }
 
-// ── Credit control ─────────────────────────────────────────────────────────
-export function availableCredit(client: Client): number {
-  return client.credit_limit - client.outstanding_balance
-}
-
-export function isOverLimit(client: Client): boolean {
-  return client.outstanding_balance > client.credit_limit
-}
-
-export function creditUtilizationPercent(client: Client): number {
-  if (client.credit_limit <= 0) return client.outstanding_balance > 0 ? 100 : 0
-  return Math.min(100, Math.round((client.outstanding_balance / client.credit_limit) * 100))
-}
-
-/**
- * Reusable "warn but allow override" check. Call this from the rental and
- * invoice creation forms before submit — if it returns non-null, show the
- * message in a dismissible/acknowledgeable warning banner rather than a
- * hard block.
- *
- * `additionalAmount` is the value of the document being created (e.g. a
- * new invoice's total) so the check reflects the balance *after* this
- * transaction, not just the client's current state.
- */
-export function checkCreditWarning(client: Client, additionalAmount = 0): { message: string; projectedBalance: number } | null {
-  if (client.status === "Inactive") {
-    return { message: `${client.name} is marked Inactive.`, projectedBalance: client.outstanding_balance }
-  }
-  const projected = client.outstanding_balance + additionalAmount
-  if (projected > client.credit_limit) {
-    const over = projected - client.credit_limit
-    return {
-      message: `This would put ${client.name} ${kes(over)} over their ${kes(client.credit_limit)} credit limit (projected balance: ${kes(projected)}).`,
-      projectedBalance: projected,
-    }
-  }
-  return null
-}
-
 // ── Export ──────────────────────────────────────────────────────────────
 export function exportClientsCSV(rows: Client[]) {
-  const header = "Client ID,Name,Type,Status,Contact,Outstanding,Credit Limit,Available Credit,Rating"
+  const header = "Client ID,Name,Type,Status,Contact,Outstanding,Rating"
   const lines = rows.map((c) =>
     [
       c.code, `"${c.name}"`, c.client_type, c.status, c.contact_phone,
-      c.outstanding_balance.toFixed(2), c.credit_limit.toFixed(2), availableCredit(c).toFixed(2), c.rating ?? "—",
+      c.outstanding_balance.toFixed(2), c.rating ?? "—",
     ].join(","),
   )
   const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" })
