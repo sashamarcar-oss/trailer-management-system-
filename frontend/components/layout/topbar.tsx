@@ -1,9 +1,8 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bell, Sun, Moon, ChevronDown, LogOut, X, Building2, CalendarDays, CircleUserRound, FileText, Truck, type LucideIcon } from "lucide-react";
+import { Search, Bell, Sun, Moon, X, Building2, CalendarDays, CircleUserRound, FileText, Truck, PanelLeft, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getStoredUser, logout, ROLE_LABELS, type AuthUser } from "@/lib/auth";
 import { api } from "@/lib/api";
 import type { Notification } from "@/types";
 
@@ -40,11 +39,10 @@ function presentNotification(item: Notification): NotificationPresentation {
   return { title: `${recordName}${object} was ${action}.`, detail: `Action by ${actor}`, Icon };
 }
 
-export function Topbar({ title }: { title: string }) {
+export function Topbar({ title, onToggleSidebar }: { title: string; onToggleSidebar?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [dark, setDark] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(getStoredUser());
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -57,21 +55,6 @@ export function Topbar({ title }: { title: string }) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
-
-  useEffect(() => {
-    let active = true;
-    async function loadUser() {
-      try {
-        const { data } = await api.auth.me();
-        if (active) {
-          localStorage.setItem("auth_user", JSON.stringify(data));
-          setUser(data);
-        }
-      } catch { /* The stored login profile remains usable offline. */ }
-    }
-    loadUser();
-    return () => { active = false; };
-  }, []);
 
   useEffect(() => {
     const closeNotifications = (event: MouseEvent) => {
@@ -127,20 +110,23 @@ export function Topbar({ title }: { title: string }) {
   const unreadNotificationCount = notifications.filter((item) => !seenNotificationIds.includes(item.id)).length;
   const visibleNotifications = notifications.filter((item) => !clearedNotificationIds.includes(item.id));
   const markAllNotificationsRead = () => setSeenNotificationIds((seen) => Array.from(new Set([...seen, ...notifications.map((item) => item.id)])));
-  const roleLabel = user?.role_name
-    ? ROLE_LABELS[user.role_name]
-    : user?.is_superuser
-      ? "Super Admin"
-      : "No role assigned";
 
   return (
     <header className="relative flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-card sticky top-0 z-10">
-      <div className="flex items-center gap-2 min-w-0">
-        <p className="text-sm font-medium capitalize truncate">{title}</p>
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label="Toggle sidebar"
+          className="flex items-center justify-center shrink-0 text-foreground hover:text-teal transition-colors"
+        >
+          <PanelLeft size={22} />
+        </button>
+        <p className="text-xl font-semibold capitalize truncate">{title}</p>
       </div>
 
-      <div className="hidden sm:flex relative items-center gap-2 px-3 py-2 rounded-lg flex-1 max-w-sm bg-background border border-border">
-        <Search size={15} className="text-muted-foreground" />
+      <div className="hidden sm:flex relative items-center gap-2 px-4 py-2.5 rounded-full flex-1 max-w-md bg-background border border-border">
+        <Search size={16} className="text-muted-foreground" />
         <input
           value={query}
           onChange={(event) => { setQuery(event.target.value); setShowSearch(true); }}
@@ -160,19 +146,13 @@ export function Topbar({ title }: { title: string }) {
         )}
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          onClick={() => setDark((d) => !d)}
-          className="w-9 h-9 rounded-lg flex items-center justify-center bg-background border border-border"
-        >
-          {dark ? <Sun size={16} className="text-teal" /> : <Moon size={16} className="text-teal" />}
-        </button>
-        <button onClick={() => setShowNotifications((visible) => !visible)} aria-label="Notifications" aria-expanded={showNotifications} className="relative w-9 h-9 rounded-lg flex items-center justify-center bg-background border border-border">
-          <Bell size={16} className="text-teal" />
-          {!!unreadNotificationCount && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">{unreadNotificationCount}</span>}
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={() => setShowNotifications((visible) => !visible)} aria-label="Notifications" aria-expanded={showNotifications} className="relative w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors">
+          <Bell size={18} />
+          {!!unreadNotificationCount && <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">{unreadNotificationCount}</span>}
         </button>
         {showNotifications && (
-          <div ref={notificationPanelRef} className="absolute right-4 sm:right-24 top-[calc(100%+0.5rem)] z-30 w-[min(25rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+          <div ref={notificationPanelRef} className="absolute right-4 sm:right-14 top-[calc(100%+0.5rem)] z-30 w-[min(25rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <h2 className="text-lg font-semibold">Notifications</h2>
               <button type="button" onClick={markAllNotificationsRead} className="text-sm font-medium text-teal hover:opacity-80">Mark all as read</button>
@@ -199,22 +179,12 @@ export function Topbar({ title }: { title: string }) {
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 pl-3 border-l border-border">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold bg-blue">
-            SA
-          </div>
-          <div className="hidden md:block leading-tight">
-            <p className="text-xs font-medium">{user ? `${user.first_name} ${user.last_name}`.trim() || user.username : "User"}</p>
-            <p className="text-[11px] text-muted-foreground">{roleLabel}</p>
-          </div>
-        </div>
         <button
-          onClick={logout}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground bg-background border border-border hover:bg-white/10"
-          type="button"
+          onClick={() => setDark((d) => !d)}
+          aria-label="Toggle theme"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
         >
-          <LogOut size={16} />
-          Logout
+          {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
       </div>
     </header>
