@@ -136,8 +136,6 @@ export function Topbar({ title }: { title: string }) {
   return (
     <header className="relative flex items-center justify-between gap-4 px-6 py-3.5 border-b border-border bg-card sticky top-0 z-10">
       <div className="flex items-center gap-2 min-w-0">
-        <p className="text-xs text-muted-foreground">Modules</p>
-        <ChevronDown size={13} className="text-muted-foreground" />
         <p className="text-sm font-medium capitalize truncate">{title}</p>
       </div>
 
