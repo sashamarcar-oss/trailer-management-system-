@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AlertCircle, Pencil, Plus, ShieldCheck, UserX, X } from "lucide-react";
 import { axiosClient } from "@/lib/api";
 import { ModuleHeader } from "@/components/ui/ModuleHeader";
+import { MainLayout } from "@/components/layout/main-layout";
 
 type AdminUser = {
   id: number;
@@ -115,7 +116,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div>
+    <MainLayout title="Admin Users">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <ModuleHeader title="Admin users" subtitle="Settings / Admin users · Every account below has the shared TrailerOps administrator dashboard." />
         <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-teal px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
@@ -150,6 +151,6 @@ export default function AdminUsersPage() {
       </div>
 
       {open && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><div className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl"><div className="flex items-center justify-between border-b border-border px-6 py-4"><div><h2 className="text-lg font-semibold">{editing ? "Edit administrator" : "Add administrator"}</h2><p className="mt-0.5 text-xs text-muted-foreground">All administrators receive the same TrailerOps dashboard access.</p></div><button onClick={() => setOpen(false)} className="rounded p-1 text-muted-foreground hover:bg-muted"><X size={20} /></button></div><form onSubmit={save} className="space-y-4 px-6 py-5">{formError && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}<div className="grid grid-cols-2 gap-4"><label className="text-sm font-medium">First name<input required value={form.first_name} onChange={(event) => setForm({ ...form, first_name: event.target.value })} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2" /></label><label className="text-sm font-medium">Last name<input required value={form.last_name} onChange={(event) => setForm({ ...form, last_name: event.target.value })} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2" /></label></div><label className="block text-sm font-medium">Email<input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2" /></label><label className="block text-sm font-medium">Phone<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2" /></label><div className="grid grid-cols-2 gap-4"><label className="text-sm font-medium">{editing ? "New password (optional)" : "Password"}<input required={!editing} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2" /></label><label className="text-sm font-medium">Confirm password<input required={!editing || Boolean(form.password)} type="password" value={form.confirm_password} onChange={(event) => setForm({ ...form, confirm_password: event.target.value })} className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2" /></label></div><div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-input px-4 py-2 text-sm font-medium">Cancel</button><button disabled={saving} type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{saving ? "Saving…" : editing ? "Save changes" : "Create admin"}</button></div></form></div></div>}
-    </div>
+    </MainLayout>
   );
 }

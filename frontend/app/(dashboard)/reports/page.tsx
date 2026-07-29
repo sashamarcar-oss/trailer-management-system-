@@ -9,6 +9,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { axiosClient } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { MainLayout } from "@/components/layout/main-layout"
 import {
   AlertCircle, BarChart3, CheckCircle2, Clock, DollarSign,
   Download, RefreshCw, FileText, FileSignature, Eye,
@@ -368,9 +369,11 @@ function pieLabel({ name, percent }: { name?: string; percent?: number }) {
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function TrailerReportsPage() {
   return (
-    <React.Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading reports…</div>}>
-      <TrailerReportsPageContent />
-    </React.Suspense>
+    <MainLayout title="Reports">
+      <React.Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading reports…</div>}>
+        <TrailerReportsPageContent />
+      </React.Suspense>
+    </MainLayout>
   )
 }
 

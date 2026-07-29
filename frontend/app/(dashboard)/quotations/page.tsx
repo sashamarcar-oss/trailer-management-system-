@@ -17,6 +17,7 @@ import {
 } from "./quotation-utils"
 import { QuotationFormDialog } from "./QuotationFormDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
+import { MainLayout } from "@/components/layout/main-layout"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -257,7 +258,7 @@ export default function QuotationsPage() {
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE))
 
   return (
-    <div>
+    <MainLayout title="Quotations">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <ModuleHeader title="Quotations" subtitle="Build, send, and convert quotations to rentals" />
         <div className="flex gap-2">
@@ -381,6 +382,6 @@ export default function QuotationsPage() {
           Converting quotation to invoice…
         </div>
       )}
-    </div>
+    </MainLayout>
   )
 }

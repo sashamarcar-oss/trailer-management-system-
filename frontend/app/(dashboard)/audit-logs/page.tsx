@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { AuditLog } from "@/types";
+import { MainLayout } from "@/components/layout/main-layout";
 
 const ACTION_LABELS: Record<string, string> = {
   CREATE: "Create",
@@ -144,7 +145,8 @@ export default function AuditLogsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <MainLayout title="Audit Logs">
+      <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap"><ModuleHeader title="Audit logs" subtitle={`${filteredRows.length} activity events captured`} /><Button variant="outline" onClick={exportCsv}><Download className="h-4 w-4" /> Export CSV</Button></div>
 
       <Card>
@@ -217,6 +219,7 @@ export default function AuditLogsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

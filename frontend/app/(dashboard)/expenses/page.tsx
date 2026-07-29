@@ -15,6 +15,7 @@ import { getStoredUser } from "@/lib/auth";
 import { expenseStatuses } from "@/lib/validations/expense";
 import { Expense, Paginated } from "@/types";
 import { DetailsDialog } from "@/components/ui/DetailsDialog";
+import { MainLayout } from "@/components/layout/main-layout";
 
 export default function ExpensesPage() {
   const [rows, setRows] = useState<Expense[]>([]);
@@ -98,7 +99,7 @@ export default function ExpensesPage() {
   ];
 
   return (
-    <div>
+    <MainLayout title="Expenses">
       <ModuleHeader
         title="Expense management"
         subtitle={`KES ${total.toLocaleString()} recorded`}
@@ -125,6 +126,6 @@ export default function ExpensesPage() {
           { label: "Notes", value: viewing.notes },
         ] : []}
       />
-    </div>
+    </MainLayout>
   );
 }
