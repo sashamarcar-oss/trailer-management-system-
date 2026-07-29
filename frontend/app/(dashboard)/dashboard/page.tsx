@@ -12,6 +12,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import type { AuditLog, Client, Expense, Invoice, Quotation, Rental, Trailer } from "@/types";
+import { MainLayout } from "@/components/layout/main-layout";
 
 const displayFont = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"], variable: "--font-display" });
 const monoFont = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono-data" });
@@ -319,6 +320,7 @@ export default function DashboardPage() {
   );
 
   return (
+    <MainLayout title="Dashboard">
     <div className={`${displayFont.variable} ${monoFont.variable}`}>
       <div className="mb-6 rounded-2xl border border-border/80 bg-gradient-to-r from-teal-50 via-white to-sky-50 p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -489,5 +491,6 @@ export default function DashboardPage() {
 
       {loading ? <p className="mt-3 text-sm text-muted-foreground">Refreshing dashboard data…</p> : null}
     </div>
+    </MainLayout>
   );
 }

@@ -15,6 +15,7 @@ import {
   EXPIRY_TONE_CLASS, apiErrorMessage, exportTrailersCSV, expiryTone, formatDate, formatMoney, needsAttention,
 } from "./trailer-utils"
 import { TrailerFormDialog } from "./TrailerFormDialog"
+import { MainLayout } from "@/components/layout/main-layout"
 
 const PAGE_SIZE = 20
 
@@ -179,7 +180,7 @@ export default function TrailersPage() {
   const hasFilters = Boolean(search) || statusFilter !== "All" || typeFilter !== "All" || attentionOnly
 
   return (
-    <div>
+    <MainLayout title="Trailer Management">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold">Trailer management</h2>
@@ -314,6 +315,6 @@ export default function TrailersPage() {
             : "None recorded" },
         ] : []}
       />
-    </div>
+    </MainLayout>
   )
 }

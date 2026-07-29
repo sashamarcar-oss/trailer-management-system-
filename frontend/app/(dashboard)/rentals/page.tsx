@@ -19,6 +19,7 @@ import { RentalFormDialog } from "./RentalFormDialog"
 import { CheckoutDialog } from "./CheckoutDialog"
 import { ReturnDialog } from "./ReturnDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
+import { MainLayout } from "@/components/layout/main-layout"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -253,7 +254,7 @@ export default function RentalsPage() {
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE))
 
   return (
-    <div>
+    <MainLayout title="Rentals">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <ModuleHeader title="Rental management" subtitle="Quotation → agreement → active → return" />
         <div className="flex gap-2">
@@ -341,6 +342,6 @@ export default function RentalsPage() {
       <CheckoutDialog rental={checkingOut} onClose={() => setCheckingOut(null)} onDone={load} />
       <ReturnDialog rental={returning} onClose={() => setReturning(null)} onDone={load} />
       <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.rentalNumber || "Rental details"} description={viewing ? `${viewing.clientName} · ${viewing.trailers.map((trailer) => trailer.trailerName).join(", ")}` : undefined} fields={viewing ? [{ label: "Status", value: displayStatus(viewing) }, { label: "Pickup date", value: viewing.pickupDate }, { label: "Return date", value: viewing.scheduledReturnDate }, { label: "Subtotal", value: kes(viewing.subtotal) }, { label: "Total", value: kes(viewing.total) }, { label: "Deposit", value: kes(viewing.depositAmount) }, { label: "Notes", value: viewing.notes }] : []} />
-    </div>
+    </MainLayout>
   )
 }

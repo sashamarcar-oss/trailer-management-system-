@@ -19,6 +19,7 @@ import { InvoiceFormDialog } from "./InvoiceFormDialog"
 import { RecordPaymentDialog } from "./RecordPaymentDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
 import { PaymentHistoryDialog } from "./PaymentHistoryDialog"
+import { MainLayout } from "@/components/layout/main-layout"
 
 function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -244,7 +245,7 @@ export default function InvoicesPage() {
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE))
 
   return (
-    <div>
+    <MainLayout title="Invoices">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <ModuleHeader title="Invoice management" subtitle="Track dues, payments, and outstanding balances" />
         <div className="flex gap-2">
@@ -409,6 +410,6 @@ export default function InvoicesPage() {
       )}
       <PaymentHistoryDialog invoice={historyInvoice} open={Boolean(historyInvoice)} onOpenChange={(open) => !open && setHistoryInvoice(null)} />
       <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.invoiceNumber || "Invoice details"} description={viewing?.clientName} fields={viewing ? [{ label: "Status", value: viewing.status }, { label: "Invoice date", value: viewing.date }, { label: "Due date", value: viewing.dueDate }, { label: "Total", value: kes(viewing.total) }, { label: "Paid", value: kes(viewing.amountPaid) }, { label: "Balance", value: kes(viewing.balance) }, { label: "Items", value: viewing.lineItems.map((item) => `${item.description} × ${item.quantity} — ${kes(item.amount)}`).join("; ") }, { label: "Notes", value: viewing.notes }] : []} />
-    </div>
+    </MainLayout>
   )
 }
