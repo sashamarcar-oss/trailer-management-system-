@@ -138,6 +138,14 @@ export const api = {
       const { data } = await axiosClient.post("/auth/forgot-password/", { email });
       return data;
     },
+    async resetPassword(uid: string, token: string, newPassword: string) {
+      const { data } = await axiosClient.post("/auth/reset-password/", {
+        uid,
+        token,
+        new_password: newPassword,
+      });
+      return data;
+    },
     async changePassword(oldPassword: string, newPassword: string) {
       const { data } = await axiosClient.post("/auth/change-password/", {
         old_password: oldPassword,
