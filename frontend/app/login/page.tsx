@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Truck } from "lucide-react";
 import { login } from "@/lib/auth";
 import { theme } from "@/lib/theme";
@@ -79,6 +80,10 @@ export default function LoginPage() {
         >
           {loading ? "Signing in…" : "Sign in"}
         </button>
+
+        <Link href="/forgot-password" className="block text-center text-xs mt-4" style={{ color: t.teal }}>
+          Forgot password?
+        </Link>
       </form>
     </div>
   );
