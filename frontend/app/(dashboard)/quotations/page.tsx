@@ -364,7 +364,8 @@ export default function QuotationsPage() {
       <DetailsDialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)} title={viewing?.quotationNumber || "Quotation details"} description={viewing?.clientName} fields={viewing ? [
         { label: "Status", value: viewing.status }, { label: "Issued", value: viewing.issueDate },
         { label: "Expires", value: viewing.expiryDate }, { label: "Subtotal", value: kes(viewing.subtotal) },
-        { label: "VAT", value: kes(viewing.vatAmount) }, { label: "Total", value: kes(viewing.total) },
+        { label: `Discount (${viewing.discountPercent}%)`, value: `- ${kes(viewing.discountAmount)}` },
+        { label: "Total", value: kes(viewing.total) },
         { label: "Items", value: viewing.lineItems.map((item) => `${item.description} × ${item.quantity} — ${kes(item.amount)}`).join("; ") },
         { label: "Notes", value: viewing.notes },
       ] : []} />

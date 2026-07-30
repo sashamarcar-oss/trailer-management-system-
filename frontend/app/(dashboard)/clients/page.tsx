@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   AlertCircle, Download, Eye, FileText, MoreVertical, Pencil, Plus, Search,
   Trash2, Ban, CheckCircle2, ReceiptText, Send,
@@ -9,7 +9,7 @@ import { ModuleHeader } from "@/components/ui/ModuleHeader"
 import { Table, Column } from "@/components/ui/Table"
 import type { Client, ClientPayload, ClientStatus, Paginated, StatementLine } from "./types-and-api-notes"
 import { clientApi } from "./client-api"
-import { exportClientStatementPDF, exportClientsCSV, formatCurrency, kes } from "./client-utils"
+import { exportClientStatementPDF, exportClientsCSV } from "./client-utils"
 import { ClientFormDialog } from "./ClientFormDialog"
 import { DetailsDialog } from "@/components/ui/DetailsDialog"
 import { MainLayout } from "@/components/layout/main-layout"
@@ -125,11 +125,6 @@ export default function ClientsPage() {
   useEffect(() => { load() }, [load])
   useEffect(() => { setPage(1) }, [search, statusFilter, typeFilter])
 
-  const stats = useMemo(() => {
-    const totalOutstanding = rows.reduce((s, c) => s + c.outstanding_balance, 0)
-    return { totalOutstanding }
-  }, [rows])
-
   async function handleAction(client: Client, action: string) {
     setActionError("")
     try {
@@ -170,10 +165,6 @@ export default function ClientsPage() {
     { key: "name", label: "Name", render: (r) => <span className="font-medium text-foreground">{r.name}</span> },
     { key: "client_type", label: "Type" },
     { key: "contact_phone", label: "Contact" },
-    {
-      key: "outstanding_balance", label: "Outstanding",
-      render: (r) => <span>{formatCurrency(r.outstanding_balance, r.currency || "USD")}</span>,
-    },
     { key: "status", label: "Status", render: (r) => <StatusBadge status={r.status} /> },
     { key: "actions", label: "", render: (r) => <ActionsMenu client={r} onAction={(action) => handleAction(r, action)} /> },
   ]
@@ -198,7 +189,6 @@ export default function ClientsPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
         <StatCard label="Total Clients" value={String(count)} valueClass="text-blue-600" />
-        <StatCard label="Total Outstanding" value={kes(stats.totalOutstanding)} valueClass="text-amber-600" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mt-4 p-3 rounded-xl border border-border bg-muted/30">
@@ -276,7 +266,6 @@ export default function ClientsPage() {
           { label: "Email", value: viewing.contact_email },
           { label: "Address", value: viewing.address },
           { label: "Currency", value: viewing.currency || "USD" },
-          { label: "Outstanding", value: formatCurrency(viewing.outstanding_balance, viewing.currency || "USD") },
           { label: "Payment terms", value: `${viewing.payment_terms_days} days` },
           { label: "Documents", value: viewing.documents?.length ? (
             <ul className="space-y-1 text-sm">

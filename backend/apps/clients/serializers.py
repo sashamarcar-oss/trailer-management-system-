@@ -61,7 +61,7 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = "__all__"
-        read_only_fields = ["code", "outstanding_balance", "created_by", "created_at", "updated_at"]
+        read_only_fields = ["code", "created_by", "created_at", "updated_at"]
 
     def validate_client_type(self, value):
         return value.strip().lower()

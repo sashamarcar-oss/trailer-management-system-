@@ -35,7 +35,6 @@ class Client(models.Model):
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
 
     credit_limit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    outstanding_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     preferred_payment_terms = models.CharField(max_length=10, choices=PAYMENT_TERMS_CHOICES, default="net_30")
 
     rating = models.DecimalField(max_digits=2, decimal_places=1, default=0,
@@ -49,7 +48,7 @@ class Client(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
         if not self.code:
@@ -117,7 +116,7 @@ class DocumentSigningEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
 
 class ClientDocument(models.Model):

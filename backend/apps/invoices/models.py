@@ -32,7 +32,7 @@ class Invoice(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-invoice_date"]
+        ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:

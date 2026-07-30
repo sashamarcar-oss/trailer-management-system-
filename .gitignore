@@ -21,5 +21,8 @@ build/
 __pycache__/
 *.pyc
 
+# Django Media
+backend/media/
+
 # VS Code
 .vscode/

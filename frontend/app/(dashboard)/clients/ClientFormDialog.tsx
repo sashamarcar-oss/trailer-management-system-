@@ -135,8 +135,7 @@ export function ClientFormDialog({
           </div>
 
           <div className="rounded-xl border border-border bg-background p-4">
-            <p className="text-sm font-semibold">Document workflow</p>
-            <p className="text-xs text-muted-foreground mt-1">The admin can now send the contract and inspection report directly to the client; the client reviews, signs, or uploads the signed copies before checkout proceeds.</p>
+            <p className="text-sm font-semibold">Documents</p>
             <div className="grid grid-cols-1 gap-3 mt-4">
               <label className="block text-xs text-muted-foreground">Driver's license</label>
               <input type="file" accept="image/*,.pdf" onChange={(e) => setDriversLicenseFile(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-foreground" />

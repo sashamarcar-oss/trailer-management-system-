@@ -60,7 +60,6 @@ export interface Client {
   passport?: string;
   business_registration?: string;
   credit_limit: number;
-  outstanding_balance: number;
   preferred_payment_terms: "Cash" | "Net 7" | "Net 15" | "Net 30" | "Net 60";
   notes?: string;
   rating: number;

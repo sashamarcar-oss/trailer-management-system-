@@ -1,5 +1,6 @@
 import { axiosClient } from "@/lib/api"
 import type { Paginated, Quotation, QuotationPayload, QuotationStatus } from "./types-and-api-notes"
+import { durationInUnits } from "../rentals/rental-utils"
 
 type BackendQuotation = {
   id: number | string
@@ -88,6 +89,20 @@ function mapQuotation(item: BackendQuotation): Quotation {
 }
 
 function toBackendPayload(payload: QuotationPayload) {
+  const items = payload.lineItems.map((lineItem) => {
+    const months = durationInUnits(payload.startDate || "", payload.endDate || "", lineItem.rateUnit)
+    return {
+      trailer: lineItem.trailerId,
+      description: lineItem.description,
+      duration_days: lineItem.quantity * months,
+      rate_per_day: Number(lineItem.rate),
+    }
+  })
+
+  const subtotal = items.reduce((sum, it) => sum + it.duration_days * it.rate_per_day, 0)
+  const discountPercent = Number(payload.discountPercent || 0)
+  const discountAmount = subtotal * (discountPercent / 100)
+
   return {
     client: payload.clientId || null,
     client_name: payload.clientName,
@@ -96,18 +111,15 @@ function toBackendPayload(payload: QuotationPayload) {
     expiry_date: payload.expiryDate,
     notes: payload.notes || "",
     terms: payload.terms || "",
-    discount: 0,
+    discount: round2(discountAmount),
     tax: 0,
     status: "draft",
-    items: payload.lineItems.map((lineItem) => ({
-      trailer: lineItem.trailerId,
-      description: lineItem.description,
-      // Store quantity/rate as-is (months / rate-per-month) — no day conversion,
-      // so duration_days * rate_per_day on the backend equals quantity * rate exactly.
-      duration_days: lineItem.quantity,
-      rate_per_day: Number(lineItem.rate),
-    })),
+    items,
   }
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100
 }
 
 export const quotationApi = {
@@ -145,6 +157,8 @@ export const quotationApi = {
       expiry_date: quotation.expiryDate,
       notes: quotation.notes || "",
       terms: quotation.terms || "",
+      discount: round2(quotation.discountAmount),
+      tax: 0,
       status: "draft",
       items: quotation.lineItems.map((lineItem) => ({
         trailer: lineItem.trailerId,

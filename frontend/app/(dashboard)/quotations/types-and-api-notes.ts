@@ -67,6 +67,8 @@ export interface QuotationPayload {
   clientPhone?: string
   issueDate: string
   expiryDate: string
+  startDate?: string
+  endDate?: string
   lineItems: Omit<QuotationLineItem, "id" | "amount">[]
   discountPercent: number
   vatPercent: number

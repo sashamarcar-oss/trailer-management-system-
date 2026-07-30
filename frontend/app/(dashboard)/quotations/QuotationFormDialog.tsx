@@ -58,7 +58,7 @@ export function QuotationFormDialog({
   })
   const [items, setItems] = useState<DraftLineItem[]>([emptyLineItem()])
   const [discountPercent, setDiscountPercent] = useState<number | "">("")
-  const [vatPercent, setVatPercent] = useState(0)
+  const [vatPercent, setVatPercent] = useState<number | "">(0)
   const [notes, setNotes] = useState("")
   const [terms, setTerms] = useState("Quotation valid for 14 days from issue date. Prices subject to change thereafter.")
   const [saving, setSaving] = useState(false)
@@ -157,6 +157,8 @@ export function QuotationFormDialog({
       clientPhone: clientPhone.trim() || undefined,
       issueDate,
       expiryDate,
+      startDate,
+      endDate,
       lineItems: items.map((it) => ({
         trailerId: it.trailerId || null,
         description: it.description.trim(),

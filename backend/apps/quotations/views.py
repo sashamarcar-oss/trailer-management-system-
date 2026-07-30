@@ -46,14 +46,13 @@ class QuotationViewSet(viewsets.ModelViewSet):
                 raise ValidationError({"items": "Add at least one trailer item before converting this quotation."})
 
             pickup_date = timezone.localdate()
-            months = max(1, -(-item.duration_days // 30))
             rental = Rental.objects.create(
                 client=quotation.client,
                 trailer=item.trailer,
                 quotation=quotation,
                 rental_type="monthly",
                 pickup_date=pickup_date,
-                return_date=pickup_date + timedelta(days=months * 30),
+                return_date=pickup_date + timedelta(days=item.duration_days * 30),
                 rate=item.rate_per_day * item.duration_days,
                 status="draft",
                 created_by=request.user,
@@ -93,14 +92,12 @@ class QuotationViewSet(viewsets.ModelViewSet):
                 created_by=request.user,
             )
             for item in quotation.items.all():
-                months = max(1, -(-item.duration_days // 30))
-                total = item.rate_per_day * item.duration_days
                 InvoiceItem.objects.create(
                     invoice=invoice,
                     trailer=item.trailer,
                     description=item.description or (item.trailer.trailer_number if item.trailer else "Trailer rental"),
-                    quantity=months,
-                    unit_price=total / months,
+                    quantity=item.duration_days,
+                    unit_price=item.rate_per_day,
                 )
             quotation.status = "converted"
             quotation.save(update_fields=["status"])

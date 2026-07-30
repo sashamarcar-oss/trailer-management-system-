@@ -49,7 +49,7 @@ class Rental(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-pickup_date"]
+        ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
         if not self.rental_number:

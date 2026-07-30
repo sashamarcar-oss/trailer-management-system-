@@ -15,8 +15,10 @@ export function durationInUnits(pickupDate: string, returnDate: string, unit: Re
   const start = new Date(pickupDate)
   const end = new Date(returnDate)
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
-  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000))
-  return Math.max(1, Math.ceil(days / 30))
+  // Whole calendar months only — no fractional/prorated amounts. Jul 30 -> Aug 30
+  // is exactly 1 month ($500), Jul 30 -> Sep 30 is exactly 2 months ($1000).
+  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+  return Math.max(1, months)
 }
 
 export function lineTotal(

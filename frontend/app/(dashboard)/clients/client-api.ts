@@ -32,7 +32,6 @@ type BackendClient = {
   contact_phone: string
   email: string
   address?: string
-  outstanding_balance?: number | string
   preferred_payment_terms?: string
   rating?: number | string
   blacklisted?: boolean
@@ -74,7 +73,6 @@ function mapClient(item: BackendClient): Client {
     contact_phone: item.contact_phone, contact_email: item.email,
     secondary_contact_name: item.contact_person, address: item.address,
     status: item.blacklisted ? "Inactive" : "Active",
-    outstanding_balance: numberValue(item.outstanding_balance), overdue_balance: 0,
     payment_terms_days: terms === "cash" ? 0 : Number(terms || 30), rating: numberValue(item.rating), notes: item.notes,
     kra_pin: item.kra_pin, business_registration: item.business_registration,
     national_id: item.national_id, passport: item.passport,

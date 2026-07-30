@@ -56,7 +56,7 @@ class ClientViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filterset_class = ClientFilter
     search_fields = ["name", "contact_person", "email", "contact_phone", "code"]
-    ordering_fields = ["name", "created_at", "outstanding_balance", "credit_limit"]
+    ordering_fields = ["name", "created_at", "credit_limit"]
 
     def get_permissions(self):
         if self.action in {"submit_document_signing", "review_documents"}:

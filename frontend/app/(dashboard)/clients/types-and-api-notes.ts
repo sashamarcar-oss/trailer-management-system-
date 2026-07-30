@@ -60,8 +60,7 @@ export interface Client {
 
   status: ClientStatus
 
-  outstanding_balance: number        // total owed across all invoices
-  overdue_balance: number             // subset of outstanding_balance that's past due — the number that actually matters for collections
+
 
   payment_terms_days?: number         // e.g. 30 for "Net 30"
   rating?: number                      // 1-5, existing field
