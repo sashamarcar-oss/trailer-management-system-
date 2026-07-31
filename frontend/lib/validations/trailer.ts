@@ -25,7 +25,6 @@ export const trailerSchema = z.object({
   status: z.enum(trailerStatuses),
   location: z.string().min(1, "Location / yard is required"),
   nextInspection: z.string().min(1, "Next inspection date is required"),
-  insuranceExpiry: z.string().min(1, "Insurance expiry date is required"),
 });
 
 export type TrailerFormValues = z.infer<typeof trailerSchema>;
