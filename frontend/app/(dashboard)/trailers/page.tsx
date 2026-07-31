@@ -19,7 +19,7 @@ import { MainLayout } from "@/components/layout/main-layout"
 
 const PAGE_SIZE = 20
 
-function StatCard({ label, value, valueClass = "text-teal-700" }: { label: string; value: string; valueClass?: string }) {
+function StatCard({ label, value, valueClass = "text-primary" }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
@@ -198,7 +198,7 @@ export default function TrailersPage() {
           </button>
           <button
             onClick={() => { setEditing(null); setDialogOpen(true) }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90"
           >
             <Plus className="w-4 h-4" /> Add trailer
           </button>
@@ -207,7 +207,7 @@ export default function TrailersPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
         <StatCard label="Total trailers" value={String(count)} valueClass="text-blue-600" />
-        <StatCard label="Available" value={String(stats.available)} valueClass="text-teal-700" />
+        <StatCard label="Available" value={String(stats.available)} valueClass="text-primary" />
         <StatCard label="Rented" value={String(stats.rented)} valueClass="text-blue-600" />
         <StatCard label="Needs attention" value={String(stats.attention)} valueClass="text-amber-600" />
       </div>
@@ -240,7 +240,7 @@ export default function TrailersPage() {
         <div className="mt-6 flex flex-col items-center justify-center gap-3 py-16 text-center">
           <AlertCircle className="h-10 w-10 text-red-500" />
           <p className="text-sm text-muted-foreground max-w-md">{error}</p>
-          <button onClick={load} className="px-4 py-2 rounded-lg bg-teal-700 text-white hover:bg-teal-800 text-sm">Retry</button>
+          <button onClick={load} className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 text-sm">Retry</button>
         </div>
       ) : (
         <>
@@ -298,7 +298,7 @@ export default function TrailersPage() {
               <ul className="space-y-1 text-sm">
                 {viewing.documents.map((d) => (
                   <li key={d.id}>
-                    <a href={d.file} target="_blank" rel="noreferrer" className="text-teal-700 hover:underline">
+                    <a href={d.file} target="_blank" rel="noreferrer" className="text-primary hover:underline">
                       {d.document_type}
                     </a>
                     {d.expiry_date ? ` · expires ${formatDate(d.expiry_date)}` : ""}

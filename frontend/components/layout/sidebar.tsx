@@ -54,11 +54,11 @@ export function Sidebar({ open }: { open: boolean }) {
   return (
     <aside
       className={cn(
-        "flex flex-col shrink-0 bg-sidebar transition-all duration-200",
+        "flex flex-col shrink-0 h-full bg-sidebar transition-all duration-200",
         open ? "w-60" : "w-[68px]"
       )}
     >
-      <div className="flex items-center gap-2.5 px-4 py-5">
+      <div className="flex items-center gap-2.5 px-4 py-5 shrink-0">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-teal">
           <Truck size={18} className="text-white" />
         </div>
@@ -70,7 +70,7 @@ export function Sidebar({ open }: { open: boolean }) {
         )}
       </div>
 
-      <nav className="flex-1 px-2.5 mt-2 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto px-2.5 mt-2 space-y-1">
         {NAV.map((item) => {
           const Icon = item.icon;
           const isActive = pathname?.startsWith(item.href);
@@ -90,7 +90,7 @@ export function Sidebar({ open }: { open: boolean }) {
         })}
       </nav>
 
-      <div className="mt-auto border-t border-white/10 p-2.5">
+      <div className="shrink-0 border-t border-white/10 p-2.5">
         <div className={cn("flex items-center gap-2.5 px-1 py-2", !open && "justify-center")}>
           <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-semibold bg-blue">
             {initials}

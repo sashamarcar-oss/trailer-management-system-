@@ -2,37 +2,108 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --foreground-rgb: 15, 26, 42;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 240, 249, 248;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 8, 19, 34;
+    --background-end-rgb: 8, 19, 34;
+  }
+}
+
+/* ========================================
+   APEXIO BRAND THEME — Teal / Navy / White
+   ======================================== */
 @layer base {
   :root {
-    --background: 195 33% 97%;
-    --foreground: 197 45% 13%;
+    --background: 0 0% 100%;
+    --foreground: 217 51% 14%;
     --card: 0 0% 100%;
-    --border: 197 25% 90%;
-    --muted: 195 33% 95%;
-    --muted-foreground: 199 15% 45%;
+    --card-foreground: 217 51% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 51% 14%;
+    --primary: 174 72% 32%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 167 60% 95%;
+    --secondary-foreground: 217 51% 16%;
+    --muted: 210 35% 96%;
+    --muted-foreground: 215 20% 42%;
+    --accent: 167 65% 93%;
+    --accent-foreground: 217 51% 16%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 25% 88%;
+    --input: 210 25% 88%;
+    --ring: 174 72% 32%;
+    --chart-1: 174 72% 32%;
+    --chart-2: 217 51% 30%;
+    --chart-3: 172 66% 50%;
+    --chart-4: 215 30% 50%;
+    --chart-5: 198 75% 45%;
+    --radius: 0.5rem;
+    --sidebar-background: 217 51% 14%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 174 72% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 40% 22%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 217 40% 22%;
+    --sidebar-ring: 174 72% 42%;
+    --calendar-marker: 174 72% 32%;
 
-    --teal: 187 82% 27%;
-    --teal-light: 186 45% 92%;
-    --blue: 205 65% 33%;
-    --blue-light: 207 50% 93%;
-    --sidebar: 195 62% 16%;
-
-    --radius: 0.65rem;
+    /* --- Legacy aliases: map existing bg-teal/blue/sidebar utilities onto the brand palette --- */
+    --teal: 174 72% 32%;
+    --teal-light: 167 60% 95%;
+    --blue: 217 51% 30%;
+    --blue-light: 210 35% 94%;
+    --sidebar: 217 51% 14%;
   }
-
   .dark {
-    --background: 199 45% 10%;
-    --foreground: 190 35% 92%;
-    --card: 198 42% 13%;
-    --border: 198 35% 20%;
-    --muted: 198 35% 15%;
-    --muted-foreground: 197 20% 65%;
+    --background: 222 47% 8%;
+    --foreground: 0 0% 98%;
+    --card: 217 45% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 217 45% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 172 66% 50%;
+    --primary-foreground: 217 51% 9%;
+    --secondary: 217 35% 19%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 217 30% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 35% 21%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 30% 20%;
+    --input: 217 30% 20%;
+    --ring: 172 66% 50%;
+    --chart-1: 172 66% 50%;
+    --chart-2: 198 80% 55%;
+    --chart-3: 174 50% 40%;
+    --chart-4: 215 30% 55%;
+    --chart-5: 190 70% 60%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 172 66% 50%;
+    --sidebar-primary-foreground: 217 51% 9%;
+    --sidebar-accent: 217 35% 15%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 217 30% 15%;
+    --sidebar-ring: 172 66% 50%;
+    --calendar-marker: 172 66% 50%;
 
-    --teal: 187 55% 52%;
-    --teal-light: 187 40% 18%;
-    --blue: 205 50% 60%;
-    --blue-light: 205 40% 16%;
-    --sidebar: 199 55% 8%;
+    /* --- Legacy aliases (dark) --- */
+    --teal: 172 66% 50%;
+    --teal-light: 217 35% 19%;
+    --blue: 198 80% 55%;
+    --blue-light: 217 35% 21%;
+    --sidebar: 222 47% 6%;
   }
 }
 
@@ -42,6 +113,113 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease;
+  }
+  /* Tiny dot-grid background */
+  .bg-dot-grid {
+    background-image: radial-gradient(
+      circle,
+      hsl(var(--primary) / 0.08) 1px,
+      transparent 1px
+    );
+    background-size: 18px 18px;
+    background-position: -9px -9px;
+  }
+
+  .dark .bg-dot-grid {
+    background-image: radial-gradient(
+      circle,
+      hsl(var(--primary) / 0.12) 1px,
+      transparent 1px
+    );
+  }
+
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Responsive chart container */
+  .chart-container {
+    min-height: 250px;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* Ensure charts are responsive */
+  .recharts-responsive-container {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Better tooltip styling for dark mode */
+  .recharts-tooltip-wrapper {
+    z-index: 1000;
+  }
+
+  /* Responsive text sizing */
+  .responsive-text-xs {
+    font-size: clamp(0.75rem, 2vw, 0.875rem);
+  }
+
+  .responsive-text-sm {
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+  }
+
+  .responsive-text-base {
+    font-size: clamp(1rem, 3vw, 1.125rem);
+  }
+
+  /* Required form field indicator — use on any <Label required> or
+     by adding the `required-label` class directly to a label/span */
+  .required-label::after {
+    content: ' *';
+    color: hsl(var(--destructive));
+    font-weight: 600;
+  }
+
+  /* Responsive form grid: 1 col on mobile, 2 on tablet+ */
+  .form-grid-responsive {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .form-grid-responsive {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* Make touch targets comfortable on small screens */
+  @media (max-width: 640px) {
+    input, select, textarea, button {
+      font-size: 1rem;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

@@ -5,9 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Truck } from "lucide-react";
 import { api } from "@/lib/api";
-import { theme } from "@/lib/theme";
-
-const t = theme.light;
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -46,67 +44,63 @@ function ResetPasswordForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-sm rounded-xl border p-6"
-      style={{ background: t.surface, borderColor: t.border }}
+      className="w-full max-w-sm rounded-xl border border-border bg-card p-6"
     >
       <div className="flex items-center gap-2.5 mb-6">
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: t.teal }}>
-          <Truck size={18} color="#fff" />
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-teal">
+          <Truck size={18} className="text-white" />
         </div>
         <div>
-          <p className="font-semibold text-sm" style={{ color: t.text }}>TrailerOps</p>
-          <p className="text-xs" style={{ color: t.textMuted }}>Fleet Management</p>
+          <p className="font-semibold text-sm">TrailerOps</p>
+          <p className="text-xs text-muted-foreground">Fleet Management</p>
         </div>
       </div>
 
-      <p className="text-sm font-semibold mb-5" style={{ color: t.text }}>Choose a new password</p>
+      <p className="text-sm font-semibold mb-5">Choose a new password</p>
 
       {!linkValid ? (
-        <p className="text-xs mb-5" style={{ color: "#9C2B2B" }}>
+        <p className="text-xs mb-5 text-red-500">
           This reset link is invalid or incomplete. Please request a new one.
         </p>
       ) : done ? (
-        <p className="text-xs mb-5" style={{ color: t.text }}>
+        <p className="text-xs mb-5">
           Your password has been reset. Redirecting you to sign in…
         </p>
       ) : (
         <>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: t.textMuted }}>New password</label>
+          <label className="block text-xs font-medium mb-1.5 text-muted-foreground">New password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full mb-4 px-3 py-2 rounded-lg text-sm outline-none"
-            style={{ border: `1px solid ${t.border}`, color: t.text }}
+            className="w-full mb-4 px-3 py-2 rounded-lg text-sm outline-none bg-background border border-border text-foreground focus:border-teal"
             autoComplete="new-password"
             required
           />
 
-          <label className="block text-xs font-medium mb-1.5" style={{ color: t.textMuted }}>Confirm new password</label>
+          <label className="block text-xs font-medium mb-1.5 text-muted-foreground">Confirm new password</label>
           <input
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full mb-4 px-3 py-2 rounded-lg text-sm outline-none"
-            style={{ border: `1px solid ${t.border}`, color: t.text }}
+            className="w-full mb-4 px-3 py-2 rounded-lg text-sm outline-none bg-background border border-border text-foreground focus:border-teal"
             autoComplete="new-password"
             required
           />
 
-          {error && <p className="text-xs mb-4" style={{ color: "#9C2B2B" }}>{error}</p>}
+          {error && <p className="text-xs mb-4 text-red-500">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-60"
-            style={{ background: t.teal }}
+            className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-teal hover:opacity-90 disabled:opacity-60"
           >
             {loading ? "Resetting…" : "Reset password"}
           </button>
         </>
       )}
 
-      <Link href="/login" className="block text-center text-xs mt-4" style={{ color: t.teal }}>
+      <Link href="/login" className="block text-center text-xs mt-4 text-teal hover:opacity-80">
         Back to sign in
       </Link>
     </form>
@@ -115,11 +109,11 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div
-      className="flex items-center justify-center min-h-screen"
-      style={{ background: t.bg, fontFamily: "Inter, system-ui, sans-serif" }}
-    >
-      <Suspense fallback={<p className="text-sm" style={{ color: t.textMuted }}>Loading…</p>}>
+    <div className="relative flex items-center justify-center min-h-screen bg-background text-foreground">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
         <ResetPasswordForm />
       </Suspense>
     </div>
