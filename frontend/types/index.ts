@@ -38,7 +38,6 @@ export interface Trailer {
   status: TrailerStatus;
   location: string;
   nextInspection: string;
-  insuranceExpiry: string;
 }
 
 export type ClientType = "Individual" | "Company";
