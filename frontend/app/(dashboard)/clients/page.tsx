@@ -28,7 +28,7 @@ function StatCard({ label, value, valueClass = "text-teal-700" }: { label: strin
 function StatusBadge({ status }: { status: ClientStatus }) {
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-      status === "Active" ? "bg-teal-100 text-teal-700" : "bg-muted text-muted-foreground"
+      status === "Active" ? "bg-teal-light text-teal" : "bg-muted text-muted-foreground"
     }`}>
       {status}
     </span>

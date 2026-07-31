@@ -262,7 +262,7 @@ function PeriodBar({ periods, active, onChange }: { periods: string[]; active: s
   )
 }
 
-function StatCard({ label, value, sub, valueClass = "text-teal-700", icon, iconBg = "bg-teal-100" }: {
+function StatCard({ label, value, sub, valueClass = "text-teal-700", icon, iconBg = "bg-teal-light" }: {
   label: string; value: string; sub?: string; valueClass?: string; icon?: React.ReactNode; iconBg?: string
 }) {
   return (
@@ -967,7 +967,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Pending Value" value={usd(quotationTotals.pendingValue)} valueClass="text-amber-600" sub={`${pendingQuotations.length} open`} icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
-                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" sub="sent → converted" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" sub="sent → converted" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
                       <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" sub="within 7 days" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
                     <DataTable
@@ -980,7 +980,7 @@ function TrailerReportsPageContent() {
                         <span className={isQuotationExpiringSoon(q) ? "text-amber-600 font-semibold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{safeStr(q.expiry_date) || "—"}</span>,
                         <span className="font-semibold">{usd(quotationAmount(q))}</span>,
                         <StatusBadge status={quotationStatus(q)} />,
-                        <Link href={`/quotations/${safeStr(q.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                        <Link href={`/quotations/${safeStr(q.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
                   </div>
@@ -1054,7 +1054,7 @@ function TrailerReportsPageContent() {
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Rentals" value={String(rentalTotals.total)} valueClass="text-blue-600" icon={<PackageCheck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
-                      <StatCard label="Active Rentals" value={String(rentalTotals.active)} valueClass="text-teal-700" icon={<Truck className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Active Rentals" value={String(rentalTotals.active)} valueClass="text-teal-700" icon={<Truck className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
                       <StatCard label="Overdue Returns" value={String(rentalTotals.overdue)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                       <StatCard label="Billed Revenue" value={usd(rentalTotals.billedRevenue)} valueClass="text-purple-600" sub="what rentals charged, not necessarily collected" icon={<DollarSign className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-100" />
                     </div>
@@ -1149,7 +1149,7 @@ function TrailerReportsPageContent() {
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Trailers" value={String(fleetTotals.total)} valueClass="text-blue-600" icon={<Truck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
-                      <StatCard label="Available" value={String(fleetTotals.available)} valueClass="text-teal-700" icon={<CheckCircle2 className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Available" value={String(fleetTotals.available)} valueClass="text-teal-700" icon={<CheckCircle2 className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
                       <StatCard label="Rented" value={String(fleetTotals.rented)} valueClass="text-amber-600" icon={<PackageCheck className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
                       <StatCard label="In Maintenance" value={String(fleetTotals.inMaintenance)} valueClass="text-red-600" icon={<Wrench className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
@@ -1164,7 +1164,7 @@ function TrailerReportsPageContent() {
                         <StatusBadge status={safeStr(t.status) || "Available"} />,
                         <span className="text-muted-foreground">{safeStr(t.purchase_date) || "—"}</span>,
                         <span className="font-semibold">{usd(Number(t.purchase_price) || 0)}</span>,
-                        <Link href={`/fleet/trailers/${safeStr(t.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                        <Link href={`/fleet/trailers/${safeStr(t.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
                   </div>
@@ -1247,7 +1247,7 @@ function TrailerReportsPageContent() {
                         <span>{Number(c.total_rentals ?? c.rentals_count) || 0}</span>,
                         <span className="font-semibold text-teal-700">{usd(Number(c.total_spend ?? c.lifetime_value) || 0)}</span>,
                         <span className={Number(c.outstanding_balance) > 0 ? "font-semibold text-red-600" : "text-muted-foreground"}>{usd(Number(c.outstanding_balance) || 0)}</span>,
-                        <Link href={`/clients/${safeStr(c.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-100 text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                        <Link href={`/clients/${safeStr(c.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
                   </div>
@@ -1331,7 +1331,7 @@ function TrailerReportsPageContent() {
 
                 {financeSubTab === "Revenue Register" && (
                   <div className="space-y-5">
-                    <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-xs text-teal-800">
+                    <div className="rounded-lg border border-border bg-teal-light px-4 py-2.5 text-xs text-teal">
                       This is <strong>billed</strong> revenue — what rentals charged, regardless of whether it's been paid.
                       See <strong>Invoice Register</strong> for what's actually been collected.
                     </div>
@@ -1581,7 +1581,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Pending Value" value={usd(quotationTotals.pendingValue)} valueClass="text-amber-600" icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
-                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
                       <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
                     <Card className="bg-card border-border rounded-xl">
@@ -1654,7 +1654,7 @@ function TrailerReportsPageContent() {
                 {utilSubTab === "Overview" && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                      <StatCard label="Fleet Utilization" value={`${utilizationRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-100" />
+                      <StatCard label="Fleet Utilization" value={`${utilizationRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
                       <StatCard label="Total Trailers" value={String(fleetTotals.total)} valueClass="text-blue-600" icon={<Truck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Currently Rented" value={String(fleetTotals.rented)} valueClass="text-amber-600" icon={<PackageCheck className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
                       <StatCard label="In Maintenance" value={String(fleetTotals.inMaintenance)} valueClass="text-red-600" icon={<Wrench className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />

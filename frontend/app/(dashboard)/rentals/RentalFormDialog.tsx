@@ -266,7 +266,7 @@ export function RentalFormDialog({
             </div>
           </div>
 
-          <p className="rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs text-teal-800">
+          <p className="rounded-lg border border-border bg-teal-light px-3 py-2 text-xs text-teal">
             The client will pick up the rental and return it to the agreed location.
           </p>
 
