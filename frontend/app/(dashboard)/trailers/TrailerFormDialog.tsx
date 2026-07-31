@@ -290,7 +290,7 @@ export function TrailerFormDialog({
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium border border-input hover:bg-accent">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-60">
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-60">
               {saving ? "Saving…" : editing ? "Save changes" : "Add trailer"}
             </button>
           </div>

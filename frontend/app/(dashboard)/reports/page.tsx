@@ -202,7 +202,7 @@ function MainTabBar({ active, onChange }: { active: MainTab; onChange: (t: MainT
       {(["Reports", "Analytics"] as MainTab[]).map((t) => (
         <button key={t} onClick={() => onChange(t)}
           className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold border transition-all ${
-            active === t ? "bg-teal-700 text-white border-teal-700 shadow-sm" : "bg-card text-muted-foreground border-input hover:bg-accent"
+            active === t ? "bg-primary text-white border-primary shadow-sm" : "bg-card text-muted-foreground border-input hover:bg-accent"
           }`}>
           {t === "Reports" ? <FileText className="w-4 h-4" /> : <BarChart3 className="w-4 h-4" />}
           {t}
@@ -221,7 +221,7 @@ function ModuleNav<T extends string>({ modules, active, onChange, icons }: {
         {modules.map((m) => (
           <button key={m} onClick={() => onChange(m)}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-all ${
-              active === m ? "border-teal-600 text-teal-700" : "border-transparent text-muted-foreground hover:text-foreground"
+              active === m ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
             {icons?.[m]}
             {m}
@@ -253,7 +253,7 @@ function PeriodBar({ periods, active, onChange }: { periods: string[]; active: s
       {periods.map((p) => (
         <button key={p} onClick={() => onChange(p)}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-            active === p ? "bg-teal-700 text-white" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            active === p ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}>
           {p}
         </button>
@@ -262,7 +262,7 @@ function PeriodBar({ periods, active, onChange }: { periods: string[]; active: s
   )
 }
 
-function StatCard({ label, value, sub, valueClass = "text-teal-700", icon, iconBg = "bg-teal-light" }: {
+function StatCard({ label, value, sub, valueClass = "text-primary", icon, iconBg = "bg-teal-light" }: {
   label: string; value: string; sub?: string; valueClass?: string; icon?: React.ReactNode; iconBg?: string
 }) {
   return (
@@ -285,7 +285,7 @@ function ExportBtn({ onClick, label = "Export", variant = "outline" }: { onClick
   return (
     <button onClick={onClick}
       className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        variant === "teal" ? "bg-teal-700 text-white hover:bg-teal-800" : "border border-input bg-card hover:bg-accent"
+        variant === "teal" ? "bg-primary text-white hover:bg-primary/90" : "border border-input bg-card hover:bg-accent"
       }`}>
       <Download className="w-4 h-4" /> {label}
     </button>
@@ -354,7 +354,7 @@ function StatusBadge({ status }: { status: string }) {
   const s = status.toLowerCase()
   const cls =
     s === "completed" || s === "active" || s === "available" || s === "paid" || s === "accepted" || s === "converted"
-      ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400"
+      ? "bg-teal-100 text-primary dark:bg-teal-900/30 dark:text-teal-400"
       : s === "pending" || s === "in transit" || s === "scheduled" || s === "sent" || s === "viewed" || s === "partially paid" || s === "draft"
       ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
       : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -884,7 +884,7 @@ function TrailerReportsPageContent() {
     <div className="min-h-96 flex flex-col items-center justify-center gap-4 text-center p-6">
       <AlertCircle className="h-12 w-12 text-red-500" />
       <p className="text-sm text-muted-foreground max-w-md">{error}</p>
-      <button onClick={load} className="px-4 py-2 rounded-lg bg-teal-700 text-white hover:bg-teal-800">Retry</button>
+      <button onClick={load} className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90">Retry</button>
     </div>
   )
 
@@ -896,7 +896,7 @@ function TrailerReportsPageContent() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
-            <p className="text-sm text-teal-600 mt-0.5">Quotations, rentals, fleet, clients, and finance reporting</p>
+            <p className="text-sm text-primary mt-0.5">Quotations, rentals, fleet, clients, and finance reporting</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 border border-input rounded-lg text-sm font-medium hover:bg-accent">
@@ -967,7 +967,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Pending Value" value={usd(quotationTotals.pendingValue)} valueClass="text-amber-600" sub={`${pendingQuotations.length} open`} icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
-                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" sub="sent → converted" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
+                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-primary" sub="sent → converted" icon={<TrendingUp className="w-5 h-5 text-primary" />} iconBg="bg-teal-light" />
                       <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" sub="within 7 days" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
                     <DataTable
@@ -980,7 +980,7 @@ function TrailerReportsPageContent() {
                         <span className={isQuotationExpiringSoon(q) ? "text-amber-600 font-semibold whitespace-nowrap" : "text-muted-foreground whitespace-nowrap"}>{safeStr(q.expiry_date) || "—"}</span>,
                         <span className="font-semibold">{usd(quotationAmount(q))}</span>,
                         <StatusBadge status={quotationStatus(q)} />,
-                        <Link href={`/quotations/${safeStr(q.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                        <Link href={`/quotations/${safeStr(q.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-primary"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
                   </div>
@@ -1011,7 +1011,7 @@ function TrailerReportsPageContent() {
                       <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                         <CheckCircle2 className="w-12 h-12 text-muted-foreground/30" />
                         <p className="text-lg font-semibold text-foreground">Nothing Expiring Soon</p>
-                        <p className="text-sm text-teal-600">All open quotations have runway</p>
+                        <p className="text-sm text-primary">All open quotations have runway</p>
                       </div>
                     ) : (
                       <DataTable
@@ -1054,7 +1054,7 @@ function TrailerReportsPageContent() {
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Rentals" value={String(rentalTotals.total)} valueClass="text-blue-600" icon={<PackageCheck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
-                      <StatCard label="Active Rentals" value={String(rentalTotals.active)} valueClass="text-teal-700" icon={<Truck className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
+                      <StatCard label="Active Rentals" value={String(rentalTotals.active)} valueClass="text-primary" icon={<Truck className="w-5 h-5 text-primary" />} iconBg="bg-teal-light" />
                       <StatCard label="Overdue Returns" value={String(rentalTotals.overdue)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                       <StatCard label="Billed Revenue" value={usd(rentalTotals.billedRevenue)} valueClass="text-purple-600" sub="what rentals charged, not necessarily collected" icon={<DollarSign className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-100" />
                     </div>
@@ -1099,7 +1099,7 @@ function TrailerReportsPageContent() {
                       <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                         <CheckCircle2 className="w-12 h-12 text-muted-foreground/30" />
                         <p className="text-lg font-semibold text-foreground">No Overdue Returns</p>
-                        <p className="text-sm text-teal-600">All active rentals are within their return window</p>
+                        <p className="text-sm text-primary">All active rentals are within their return window</p>
                       </div>
                     ) : (
                       <DataTable
@@ -1149,7 +1149,7 @@ function TrailerReportsPageContent() {
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Trailers" value={String(fleetTotals.total)} valueClass="text-blue-600" icon={<Truck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
-                      <StatCard label="Available" value={String(fleetTotals.available)} valueClass="text-teal-700" icon={<CheckCircle2 className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
+                      <StatCard label="Available" value={String(fleetTotals.available)} valueClass="text-primary" icon={<CheckCircle2 className="w-5 h-5 text-primary" />} iconBg="bg-teal-light" />
                       <StatCard label="Rented" value={String(fleetTotals.rented)} valueClass="text-amber-600" icon={<PackageCheck className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
                       <StatCard label="In Maintenance" value={String(fleetTotals.inMaintenance)} valueClass="text-red-600" icon={<Wrench className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
@@ -1164,7 +1164,7 @@ function TrailerReportsPageContent() {
                         <StatusBadge status={safeStr(t.status) || "Available"} />,
                         <span className="text-muted-foreground">{safeStr(t.purchase_date) || "—"}</span>,
                         <span className="font-semibold">{usd(Number(t.purchase_price) || 0)}</span>,
-                        <Link href={`/fleet/trailers/${safeStr(t.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                        <Link href={`/fleet/trailers/${safeStr(t.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-primary"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
                   </div>
@@ -1173,7 +1173,7 @@ function TrailerReportsPageContent() {
                 {fleetSubTab === "Utilization" && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard label="Fleet Utilization" value={`${utilizationRate}%`} valueClass="text-teal-700" sub="Currently rented" />
+                      <StatCard label="Fleet Utilization" value={`${utilizationRate}%`} valueClass="text-primary" sub="Currently rented" />
                       <StatCard label="Available Trailers" value={String(fleetTotals.available)} valueClass="text-blue-600" />
                       <StatCard label="Rented Trailers" value={String(fleetTotals.rented)} valueClass="text-amber-600" />
                     </div>
@@ -1185,7 +1185,7 @@ function TrailerReportsPageContent() {
                         <span className="text-muted-foreground">{u.type}</span>,
                         <span className="text-muted-foreground">{u.plate}</span>,
                         <StatusBadge status={u.status} />,
-                        <span className="font-semibold text-teal-700">{u.daysRented}d</span>,
+                        <span className="font-semibold text-primary">{u.daysRented}d</span>,
                         <span>{u.rentalsCount}</span>,
                       ])}
                     />
@@ -1198,7 +1198,7 @@ function TrailerReportsPageContent() {
                       actions={<ExportBtn onClick={exportMaintenanceCSV} label="Export" variant="teal" />} />
                     <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                       <StatCard label="Scheduled" value={String(maintenanceTotals.scheduled)} valueClass="text-amber-600" />
-                      <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-teal-700" />
+                      <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-primary" />
                       <StatCard label="Total Cost" value={usd(maintenanceTotals.totalCost)} valueClass="text-red-600" />
                     </div>
                     <DataTable
@@ -1245,9 +1245,9 @@ function TrailerReportsPageContent() {
                       rows={filteredClients.slice(0, 30).map((c) => [
                         <span className="font-medium">{safeStr(c.name || c.company_name) || "—"}</span>,
                         <span>{Number(c.total_rentals ?? c.rentals_count) || 0}</span>,
-                        <span className="font-semibold text-teal-700">{usd(Number(c.total_spend ?? c.lifetime_value) || 0)}</span>,
+                        <span className="font-semibold text-primary">{usd(Number(c.total_spend ?? c.lifetime_value) || 0)}</span>,
                         <span className={Number(c.outstanding_balance) > 0 ? "font-semibold text-red-600" : "text-muted-foreground"}>{usd(Number(c.outstanding_balance) || 0)}</span>,
-                        <Link href={`/clients/${safeStr(c.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-teal-700"><Eye className="w-3.5 h-3.5" /></Link>,
+                        <Link href={`/clients/${safeStr(c.id)}`} className="inline-flex p-1.5 rounded hover:bg-teal-light text-primary"><Eye className="w-3.5 h-3.5" /></Link>,
                       ])}
                     />
                   </div>
@@ -1260,7 +1260,7 @@ function TrailerReportsPageContent() {
                       <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                         <CheckCircle2 className="w-12 h-12 text-muted-foreground/30" />
                         <p className="text-lg font-semibold text-foreground">No Outstanding Payments</p>
-                        <p className="text-sm text-teal-600">All client accounts are settled</p>
+                        <p className="text-sm text-primary">All client accounts are settled</p>
                       </div>
                     ) : (
                       <DataTable
@@ -1283,7 +1283,7 @@ function TrailerReportsPageContent() {
                       emptyMsg="No client activity data."
                       rows={clients.map((c) => [
                         <span className="font-medium">{safeStr(c.name || c.company_name) || "—"}</span>,
-                        <span className="font-semibold text-teal-700">{Number(c.total_rentals ?? c.rentals_count) || 0}</span>,
+                        <span className="font-semibold text-primary">{Number(c.total_rentals ?? c.rentals_count) || 0}</span>,
                         <span className="text-muted-foreground">{safeStr(c.last_rental_date) || "—"}</span>,
                       ])}
                     />
@@ -1336,7 +1336,7 @@ function TrailerReportsPageContent() {
                       See <strong>Invoice Register</strong> for what's actually been collected.
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard label="Billed Revenue" value={usd(billedRevenue)} valueClass="text-teal-700" />
+                      <StatCard label="Billed Revenue" value={usd(billedRevenue)} valueClass="text-primary" />
                       <StatCard label="Rentals Counted" value={String(rentals.length)} valueClass="text-blue-600" />
                       <StatCard label="Avg. Revenue / Rental" value={usd(rentals.length ? billedRevenue / rentals.length : 0)} valueClass="text-purple-600" />
                     </div>
@@ -1362,7 +1362,7 @@ function TrailerReportsPageContent() {
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Invoiced" value={usd(invoiceTotals.totalInvoiced)} valueClass="text-blue-600" />
-                      <StatCard label="Total Collected" value={usd(invoiceTotals.totalCollected)} valueClass="text-teal-700" />
+                      <StatCard label="Total Collected" value={usd(invoiceTotals.totalCollected)} valueClass="text-primary" />
                       <StatCard label="Outstanding" value={usd(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
                       <StatCard label="Overdue" value={usd(invoiceTotals.overdueAmount)} sub={`${invoiceTotals.overdueCount} invoices`} valueClass="text-red-600" />
                     </div>
@@ -1378,7 +1378,7 @@ function TrailerReportsPageContent() {
                           <span className="text-muted-foreground">{safeStr(inv.date || inv.issue_date) || "—"}</span>,
                           <span className={isInvoiceOverdue(inv) ? "text-red-600 font-semibold" : "text-muted-foreground"}>{safeStr(inv.due_date) || "—"}</span>,
                           <span>{usd(total)}</span>,
-                          <span className="text-teal-700">{usd(total - balance)}</span>,
+                          <span className="text-primary">{usd(total - balance)}</span>,
                           <span className={balance > 0 ? "font-semibold" : "text-muted-foreground"}>{usd(balance)}</span>,
                           <StatusBadge status={isInvoiceOverdue(inv) ? "Overdue" : invoiceStatus(inv)} />,
                         ]
@@ -1393,7 +1393,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
                       {agingChartData.map((b, i) => (
                         <StatCard key={b.bucket} label={b.bucket === "Current" ? "Current" : `${b.bucket} days`} value={usd(b.amount)}
-                          valueClass={i === 0 ? "text-teal-700" : i < 3 ? "text-amber-600" : "text-red-600"} />
+                          valueClass={i === 0 ? "text-primary" : i < 3 ? "text-amber-600" : "text-red-600"} />
                       ))}
                     </div>
                     <Card className="bg-card border-border rounded-xl">
@@ -1456,7 +1456,7 @@ function TrailerReportsPageContent() {
                           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{usd(expenseTotal)}</span></div>
                           <div className="flex justify-between text-base pt-2 border-t border-border">
                             <span className="font-semibold">Net Profit / Loss</span>
-                            <span className={`font-bold ${billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{usd(billedProfitLoss)}</span>
+                            <span className={`font-bold ${billedProfitLoss >= 0 ? "text-primary" : "text-red-600"}`}>{usd(billedProfitLoss)}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -1467,7 +1467,7 @@ function TrailerReportsPageContent() {
                           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Expenses</span><span className="font-semibold text-red-600">{usd(expenseTotal)}</span></div>
                           <div className="flex justify-between text-base pt-2 border-t border-border">
                             <span className="font-semibold">Net Profit / Loss</span>
-                            <span className={`font-bold ${collectedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"}`}>{usd(collectedProfitLoss)}</span>
+                            <span className={`font-bold ${collectedProfitLoss >= 0 ? "text-primary" : "text-red-600"}`}>{usd(collectedProfitLoss)}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -1521,7 +1521,7 @@ function TrailerReportsPageContent() {
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                   <StatCard label="Total Records" value={String(maintenanceTotals.total)} valueClass="text-blue-600" />
                   <StatCard label="Scheduled" value={String(maintenanceTotals.scheduled)} valueClass="text-amber-600" />
-                  <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-teal-700" />
+                  <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-primary" />
                   <StatCard label="Total Cost" value={usd(maintenanceTotals.totalCost)} valueClass="text-red-600" />
                 </div>
                 <DataTable
@@ -1546,9 +1546,9 @@ function TrailerReportsPageContent() {
                   actions={<ExportBtn onClick={exportTaxSummaryCSV} label="Export CSV" variant="teal" />} />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard label="Gross Revenue (Billed)" value={usd(billedRevenue)} valueClass="text-teal-700" />
+                    <StatCard label="Gross Revenue (Billed)" value={usd(billedRevenue)} valueClass="text-primary" />
                     <StatCard label="Deductible Expenses" value={usd(expenseTotal)} valueClass="text-red-600" />
-                    <StatCard label="Taxable Profit (Billed)" value={usd(billedProfitLoss)} valueClass={billedProfitLoss >= 0 ? "text-teal-700" : "text-red-600"} />
+                    <StatCard label="Taxable Profit (Billed)" value={usd(billedProfitLoss)} valueClass={billedProfitLoss >= 0 ? "text-primary" : "text-red-600"} />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <StatCard label="Gross Revenue (Collected)" value={usd(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
@@ -1581,7 +1581,7 @@ function TrailerReportsPageContent() {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                       <StatCard label="Total Quotations" value={String(quotationTotals.total)} valueClass="text-blue-600" icon={<FileSignature className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Pending Value" value={usd(quotationTotals.pendingValue)} valueClass="text-amber-600" icon={<Clock className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
-                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
+                      <StatCard label="Conversion Rate" value={`${quotationTotals.conversionRate}%`} valueClass="text-primary" icon={<TrendingUp className="w-5 h-5 text-primary" />} iconBg="bg-teal-light" />
                       <StatCard label="Expiring Soon" value={String(quotationTotals.expiringSoon)} valueClass="text-red-600" icon={<AlertCircle className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
                     </div>
                     <Card className="bg-card border-border rounded-xl">
@@ -1631,7 +1631,7 @@ function TrailerReportsPageContent() {
                       headers={["STAGE", "COUNT", "% OF TOTAL"]}
                       rows={quotationFunnelData.map((f) => [
                         <span className="font-medium">{f.stage}</span>,
-                        <span className="font-semibold text-teal-700">{f.count}</span>,
+                        <span className="font-semibold text-primary">{f.count}</span>,
                         <span>{quotations.length ? Math.round((f.count / quotations.length) * 100) : 0}%</span>,
                       ])}
                     />
@@ -1654,7 +1654,7 @@ function TrailerReportsPageContent() {
                 {utilSubTab === "Overview" && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                      <StatCard label="Fleet Utilization" value={`${utilizationRate}%`} valueClass="text-teal-700" icon={<TrendingUp className="w-5 h-5 text-teal-700" />} iconBg="bg-teal-light" />
+                      <StatCard label="Fleet Utilization" value={`${utilizationRate}%`} valueClass="text-primary" icon={<TrendingUp className="w-5 h-5 text-primary" />} iconBg="bg-teal-light" />
                       <StatCard label="Total Trailers" value={String(fleetTotals.total)} valueClass="text-blue-600" icon={<Truck className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-100" />
                       <StatCard label="Currently Rented" value={String(fleetTotals.rented)} valueClass="text-amber-600" icon={<PackageCheck className="w-5 h-5 text-amber-600" />} iconBg="bg-amber-100" />
                       <StatCard label="In Maintenance" value={String(fleetTotals.inMaintenance)} valueClass="text-red-600" icon={<Wrench className="w-5 h-5 text-red-600" />} iconBg="bg-red-100" />
@@ -1737,7 +1737,7 @@ function TrailerReportsPageContent() {
                     emptyMsg="No fleet data for this period."
                     rows={fleetByTypeData.map((t) => [
                       <span className="font-medium">{t.name}</span>,
-                      <span className="font-semibold text-teal-700">{t.count}</span>,
+                      <span className="font-semibold text-primary">{t.count}</span>,
                     ])}
                   />
                 )}
@@ -1784,7 +1784,7 @@ function TrailerReportsPageContent() {
                     rows={topClients.map((c) => [
                       <span className="font-medium">{c.name}</span>,
                       <span>{c.rentalsCount}</span>,
-                      <span className="font-semibold text-teal-700">{usd(c.totalSpend)}</span>,
+                      <span className="font-semibold text-primary">{usd(c.totalSpend)}</span>,
                     ])}
                   />
                 )}
@@ -1802,7 +1802,7 @@ function TrailerReportsPageContent() {
                 {financeAnalyticsSubTab === "Overview" && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                      <StatCard label="Billed Revenue" value={usd(billedRevenue)} valueClass="text-teal-700" />
+                      <StatCard label="Billed Revenue" value={usd(billedRevenue)} valueClass="text-primary" />
                       <StatCard label="Collected Revenue" value={usd(invoiceTotals.totalCollected)} valueClass="text-blue-600" />
                       <StatCard label="Total Expenses" value={usd(expenseTotal)} valueClass="text-red-600" />
                       <StatCard label="Outstanding AR" value={usd(invoiceTotals.totalOutstanding)} valueClass="text-amber-600" />
@@ -1893,7 +1893,7 @@ function TrailerReportsPageContent() {
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                   <StatCard label="Total Records" value={String(maintenanceTotals.total)} valueClass="text-blue-600" />
                   <StatCard label="Scheduled" value={String(maintenanceTotals.scheduled)} valueClass="text-amber-600" />
-                  <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-teal-700" />
+                  <StatCard label="Completed" value={String(maintenanceTotals.completed)} valueClass="text-primary" />
                   <StatCard label="Total Cost" value={usd(maintenanceTotals.totalCost)} valueClass="text-red-600" />
                 </div>
                 <EmptyState message="Maintenance trend charts will appear once more service history is logged." />

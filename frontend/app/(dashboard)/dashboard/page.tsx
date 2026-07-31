@@ -18,16 +18,16 @@ const displayFont = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"], 
 const monoFont = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono-data" });
 
 const COLORS = {
-  teal: "#0E7C86",
-  tealDeep: "#114B5F",
-  tealTint: "#DCEEF0",
-  navy: "#1E5F8C",
+  teal: "hsl(var(--chart-1))",
+  tealDeep: "hsl(var(--chart-2))",
+  tealTint: "hsl(var(--accent))",
+  navy: "hsl(var(--chart-2))",
   amber: "#D97A34",
-  danger: "#C1443C",
+  danger: "hsl(var(--destructive))",
   // Text/track colors follow the theme tokens so charts stay legible in dark mode.
   ink: "hsl(var(--foreground))",
   track: "hsl(var(--muted))",
-  label: "hsl(var(--teal))",
+  label: "hsl(var(--primary))",
   surface: "hsl(var(--card))",
 };
 
