@@ -13,7 +13,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex w-full min-h-screen bg-background">
+    <div className="flex w-full h-screen overflow-hidden bg-background">
       <Sidebar open={sidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar title={title} onToggleSidebar={() => setSidebarOpen((s) => !s)} />
