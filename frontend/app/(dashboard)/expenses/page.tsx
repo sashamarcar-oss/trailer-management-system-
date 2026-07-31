@@ -78,7 +78,7 @@ export default function ExpensesPage() {
     { key: "trailer", label: "Trailer", render: (r) => r.trailer || "—" },
     { key: "category", label: "Category" },
     { key: "vendor", label: "Vendor" },
-    { key: "amount", label: "Amount", render: (r) => `KES ${Number(r.amount).toLocaleString()}` },
+    { key: "amount", label: "Amount", render: (r) => `USD ${Number(r.amount).toLocaleString()}` },
     {
       key: "status",
       label: isAdmin ? "Status (edit)" : "Status",
@@ -116,14 +116,14 @@ export default function ExpensesPage() {
     <MainLayout title="Expenses">
       <ModuleHeader
         title="Expense management"
-        subtitle={`KES ${total.toLocaleString()} recorded`}
+        subtitle={`USD ${total.toLocaleString()} recorded`}
         actionLabel="Record expense"
         onAction={() => { setEditing(null); setFormOpen(true); }}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard label="Total expenses" value={`KES ${total.toLocaleString()}`} sub="All recorded expenses" />
-        <StatCard label="Approved expenses" value={`KES ${approvedTotal.toLocaleString()}`} sub="Expenses approved for payment" />
+        <StatCard label="Total expenses" value={`USD ${total.toLocaleString()}`} sub="All recorded expenses" />
+        <StatCard label="Approved expenses" value={`USD ${approvedTotal.toLocaleString()}`} sub="Expenses approved for payment" />
         <StatCard label="Pending approval" value={String(pendingApprovals)} sub="Expenses awaiting approval" />
       </div>
 
@@ -142,7 +142,7 @@ export default function ExpensesPage() {
         description={viewing?.category}
         fields={viewing ? [
           { label: "Date", value: viewing.date }, { label: "Status", value: viewing.status },
-          { label: "Amount", value: `KES ${Number(viewing.amount).toLocaleString()}` }, { label: "Trailer", value: viewing.trailer },
+          { label: "Amount", value: `USD ${Number(viewing.amount).toLocaleString()}` }, { label: "Trailer", value: viewing.trailer },
           { label: "Vendor", value: viewing.vendor }, { label: "Payment method", value: viewing.paymentMethod },
           { label: "Notes", value: viewing.notes },
         ] : []}
