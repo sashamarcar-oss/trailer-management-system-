@@ -77,5 +77,5 @@ class TrailerListSerializer(serializers.ModelSerializer):
         model = Trailer
         fields = [
             "id", "trailer_number", "registration_number", "trailer_type", "trailer_type_display",
-            "status", "status_display", "yard_location", "next_inspection_date", "insurance_expiry",
+            "status", "status_display", "yard_location", "next_inspection_date",
         ]

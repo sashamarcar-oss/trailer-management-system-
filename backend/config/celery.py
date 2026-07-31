@@ -16,8 +16,8 @@ app.conf.beat_schedule = {
         "task": "apps.invoices.tasks.send_overdue_payment_reminders",
         "schedule": 3600.0,
     },
-    "check-document-expiry": {
-        "task": "apps.trailers.tasks.check_insurance_and_license_expiry",
+    "check-inspection-due": {
+        "task": "apps.trailers.tasks.check_inspection_due",
         "schedule": 86400.0,
     },
 }
