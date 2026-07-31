@@ -1,28 +1,4 @@
-# Node.js
-node_modules/
-**/node_modules/
-
-# Next.js
-.next/
-**/.next/
-
-# Environment
-.env
-.env.local
-
-# Build
-dist/
-build/
-
-# Logs
-*.log
-
-# Python
-__pycache__/
-*.pyc
-
-# Django Media
-backend/media/
-
-# VS Code
+# Editor / OS
 .vscode/
+.idea/
+.DS_Store
