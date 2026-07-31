@@ -1,11 +1,11 @@
 import { Trailer, Client, Expense, Rental, Quotation, Invoice } from "@/types";
 
 export const mockTrailers: Trailer[] = [
-  { id: "TR-001", trailerNumber: "TR-001", registrationNumber: "KDA 221C", vin: "1FUJA6CV05LM12345", type: "Flatbed", brand: "Schmitz", model: "S.KO", year: 2019, capacity: "40T", status: "Available", location: "Nairobi Yard", nextInspection: "2026-08-12", insuranceExpiry: "2026-11-02" },
-  { id: "TR-014", trailerNumber: "TR-014", registrationNumber: "KDB 552F", vin: "2FUJA6CV05LM54321", type: "Low Loader", brand: "Faymonville", model: "MAX", year: 2020, capacity: "60T", status: "Rented", location: "Mombasa Yard", nextInspection: "2026-09-03", insuranceExpiry: "2026-10-15" },
-  { id: "TR-027", trailerNumber: "TR-027", registrationNumber: "KDC 118L", vin: "3FUJA6CV05LM99887", type: "Fuel Tanker", brand: "LAG", model: "Volume+", year: 2018, capacity: "45,000L", status: "Under Maintenance", location: "Nairobi Workshop", nextInspection: "2026-07-20", insuranceExpiry: "2026-08-30" },
-  { id: "TR-033", trailerNumber: "TR-033", registrationNumber: "KDA 900J", vin: "4FUJA6CV05LM66554", type: "Container Trailer", brand: "Kögel", model: "SLC", year: 2021, capacity: "40ft", status: "Rented", location: "Nakuru Yard", nextInspection: "2026-08-29", insuranceExpiry: "2026-12-01" },
-  { id: "TR-041", trailerNumber: "TR-041", registrationNumber: "KDD 442M", vin: "5FUJA6CV05LM33221", type: "Side Tipper", brand: "Weiying", model: "ST-30", year: 2019, capacity: "30T", status: "Available", location: "Nairobi Yard", nextInspection: "2026-10-15", insuranceExpiry: "2026-09-18" },
+  { id: "TR-001", trailerNumber: "TR-001", registrationNumber: "KDA 221C", vin: "1FUJA6CV05LM12345", type: "Flatbed", brand: "Schmitz", model: "S.KO", year: 2019, capacity: "40T", status: "Available", location: "Nairobi Yard", nextInspection: "2026-08-12" },
+  { id: "TR-014", trailerNumber: "TR-014", registrationNumber: "KDB 552F", vin: "2FUJA6CV05LM54321", type: "Low Loader", brand: "Faymonville", model: "MAX", year: 2020, capacity: "60T", status: "Rented", location: "Mombasa Yard", nextInspection: "2026-09-03" },
+  { id: "TR-027", trailerNumber: "TR-027", registrationNumber: "KDC 118L", vin: "3FUJA6CV05LM99887", type: "Fuel Tanker", brand: "LAG", model: "Volume+", year: 2018, capacity: "45,000L", status: "Under Maintenance", location: "Nairobi Workshop", nextInspection: "2026-07-20" },
+  { id: "TR-033", trailerNumber: "TR-033", registrationNumber: "KDA 900J", vin: "4FUJA6CV05LM66554", type: "Container Trailer", brand: "Kögel", model: "SLC", year: 2021, capacity: "40ft", status: "Rented", location: "Nakuru Yard", nextInspection: "2026-08-29" },
+  { id: "TR-041", trailerNumber: "TR-041", registrationNumber: "KDD 442M", vin: "5FUJA6CV05LM33221", type: "Side Tipper", brand: "Weiying", model: "ST-30", year: 2019, capacity: "30T", status: "Available", location: "Nairobi Yard", nextInspection: "2026-10-15" },
 ];
 
 export const mockClients: Client[] = [
