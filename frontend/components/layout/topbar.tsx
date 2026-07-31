@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bell, Sun, Moon, X, Building2, CalendarDays, CircleUserRound, FileText, Truck, PanelLeft, type LucideIcon } from "lucide-react";
+import { Search, Bell, X, Building2, CalendarDays, CircleUserRound, FileText, Truck, PanelLeft, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { Notification } from "@/types";
 
 type SearchResult = { label: string; detail: string; href: string };
@@ -42,7 +43,6 @@ function presentNotification(item: Notification): NotificationPresentation {
 export function Topbar({ title, onToggleSidebar }: { title: string; onToggleSidebar?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [dark, setDark] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -51,10 +51,6 @@ export function Topbar({ title, onToggleSidebar }: { title: string; onToggleSide
   const [seenNotificationIds, setSeenNotificationIds] = useState<number[]>([]);
   const [clearedNotificationIds, setClearedNotificationIds] = useState<number[]>([]);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
 
   useEffect(() => {
     const closeNotifications = (event: MouseEvent) => {
@@ -179,13 +175,7 @@ export function Topbar({ title, onToggleSidebar }: { title: string; onToggleSide
             </div>
           </div>
         )}
-        <button
-          onClick={() => setDark((d) => !d)}
-          aria-label="Toggle theme"
-          className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-        >
-          {dark ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <ThemeToggle />
       </div>
     </header>
   );
