@@ -14,6 +14,7 @@ from .serializers import (
     LoginSerializer, ChangePasswordSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer, UserSerializer,
 )
+from .tasks import send_password_reset_email
 
 User = get_user_model()
 
@@ -68,22 +69,24 @@ class ChangePasswordView(APIView):
 
 
 class ForgotPasswordView(APIView):
-    """Issues a password reset token. Wire this up to Celery + email sending
-    in production (see apps/users/tasks.py)."""
+    """Issues a password reset token and emails a reset link (see
+    apps/users/tasks.py). Always returns the same response so the endpoint
+    cannot be used to probe which emails have accounts."""
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        generic_response = Response({"detail": "If that email exists, a reset link has been sent."})
         try:
             user = User.objects.get(email=serializer.validated_data["email"])
         except User.DoesNotExist:
-            return Response({"detail": "If that email exists, a reset link has been sent."})
+            return generic_response
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        # send_password_reset_email.delay(user.id, uid, token)  # Celery task
-        return Response({"detail": "If that email exists, a reset link has been sent.", "uid": uid, "token": token})
+        send_password_reset_email.delay(user.id, uid, token)
+        return generic_response
 
 
 class ResetPasswordView(APIView):

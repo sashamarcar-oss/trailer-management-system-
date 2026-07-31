@@ -75,8 +75,6 @@ export interface Trailer {
   yard_location: string
   gps_lat: string | null
   gps_lng: string | null
-  license_expiry: string | null
-  insurance_expiry: string | null
   next_inspection_date: string | null
   qr_code_uid?: string
   images?: TrailerImage[]
@@ -107,8 +105,6 @@ export interface TrailerPayload {
   yard_location?: string
   gps_lat?: string | null
   gps_lng?: string | null
-  license_expiry?: string | null
-  insurance_expiry?: string | null
   next_inspection_date?: string | null
 }
 

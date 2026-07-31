@@ -57,7 +57,6 @@ function normalizeTrailerResponse<T extends Record<string, any>>(item: T): T {
     type: item.trailer_type ?? item.type,
     location: item.yard_location ?? item.location,
     nextInspection: item.next_inspection_date ?? item.nextInspection,
-    insuranceExpiry: item.insurance_expiry ?? item.insuranceExpiry,
   };
 }
 
@@ -70,7 +69,6 @@ function normalizeTrailerRequest(payload: Record<string, any>) {
     trailer_type: payload.type ?? payload.trailer_type,
     yard_location: payload.location ?? payload.yard_location,
     next_inspection_date: payload.nextInspection ?? payload.next_inspection_date,
-    insurance_expiry: payload.insuranceExpiry ?? payload.insurance_expiry,
   };
 }
 
@@ -136,6 +134,14 @@ export const api = {
     },
     async forgotPassword(email: string) {
       const { data } = await axiosClient.post("/auth/forgot-password/", { email });
+      return data;
+    },
+    async resetPassword(uid: string, token: string, newPassword: string) {
+      const { data } = await axiosClient.post("/auth/reset-password/", {
+        uid,
+        token,
+        new_password: newPassword,
+      });
       return data;
     },
     async changePassword(oldPassword: string, newPassword: string) {

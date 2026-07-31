@@ -39,8 +39,6 @@ class Trailer(models.Model):
     gps_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     gps_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
-    license_expiry = models.DateField(null=True, blank=True)
-    insurance_expiry = models.DateField(null=True, blank=True)
     next_inspection_date = models.DateField(null=True, blank=True)
 
     qr_code_uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
