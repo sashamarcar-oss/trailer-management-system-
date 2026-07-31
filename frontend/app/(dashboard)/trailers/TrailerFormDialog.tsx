@@ -30,8 +30,6 @@ type FormState = {
   yard_location: string
   gps_lat: string
   gps_lng: string
-  license_expiry: string
-  insurance_expiry: string
   next_inspection_date: string
 }
 
@@ -54,8 +52,6 @@ const EMPTY: FormState = {
   yard_location: "",
   gps_lat: "",
   gps_lng: "",
-  license_expiry: "",
-  insurance_expiry: "",
   next_inspection_date: "",
 }
 
@@ -79,8 +75,6 @@ function fromTrailer(t: Trailer): FormState {
     yard_location: t.yard_location ?? "",
     gps_lat: t.gps_lat ?? "",
     gps_lng: t.gps_lng ?? "",
-    license_expiry: t.license_expiry ?? "",
-    insurance_expiry: t.insurance_expiry ?? "",
     next_inspection_date: t.next_inspection_date ?? "",
   }
 }
@@ -142,8 +136,6 @@ export function TrailerFormDialog({
       yard_location: form.yard_location.trim(),
       gps_lat: form.gps_lat.trim() || null,
       gps_lng: form.gps_lng.trim() || null,
-      license_expiry: form.license_expiry || null,
-      insurance_expiry: form.insurance_expiry || null,
       next_inspection_date: form.next_inspection_date || null,
     }
 
@@ -287,14 +279,6 @@ export function TrailerFormDialog({
           <div className="space-y-3">
             <p className={SECTION}>Compliance</p>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className={LABEL}>License expiry</label>
-                <input type="date" value={form.license_expiry} onChange={set("license_expiry")} className={FIELD} />
-              </div>
-              <div>
-                <label className={LABEL}>Insurance expiry</label>
-                <input type="date" value={form.insurance_expiry} onChange={set("insurance_expiry")} className={FIELD} />
-              </div>
               <div>
                 <label className={LABEL}>Next inspection</label>
                 <input type="date" value={form.next_inspection_date} onChange={set("next_inspection_date")} className={FIELD} />

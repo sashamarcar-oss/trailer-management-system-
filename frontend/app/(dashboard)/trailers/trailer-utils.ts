@@ -53,17 +53,16 @@ export const EXPIRY_TONE_CLASS: Record<ExpiryTone, string> = {
   none: "text-muted-foreground",
 }
 
-/** True when insurance, license, or inspection is expired or within 30 days. */
+/** True when the next inspection is overdue or within 30 days. */
 export function needsAttention(trailer: Trailer): boolean {
-  return [trailer.insurance_expiry, trailer.license_expiry, trailer.next_inspection_date]
-    .map((d) => expiryTone(d))
-    .some((tone) => tone === "expired" || tone === "soon")
+  const tone = expiryTone(trailer.next_inspection_date)
+  return tone === "expired" || tone === "soon"
 }
 
 export function exportTrailersCSV(rows: Trailer[]) {
   const header = [
     "Trailer #", "Registration", "VIN", "Type", "Status", "Yard / Location",
-    "Insurance Expiry", "License Expiry", "Next Inspection",
+    "Next Inspection",
   ]
   const lines = rows.map((t) =>
     [
@@ -73,8 +72,6 @@ export function exportTrailersCSV(rows: Trailer[]) {
       typeLabel(t.trailer_type),
       statusLabel(t.status),
       `"${(t.yard_location ?? "").replace(/"/g, '""')}"`,
-      t.insurance_expiry ?? "",
-      t.license_expiry ?? "",
       t.next_inspection_date ?? "",
     ].join(","),
   )

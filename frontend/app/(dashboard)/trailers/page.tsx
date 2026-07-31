@@ -170,7 +170,6 @@ export default function TrailersPage() {
     { key: "registration_number", label: "Registration" },
     { key: "trailer_type", label: "Type", render: (r) => r.trailer_type_display || typeLabel(r.trailer_type) },
     { key: "yard_location", label: "Location", render: (r) => r.yard_location || "—" },
-    { key: "insurance_expiry", label: "Insurance", render: (r) => <ExpiryCell value={r.insurance_expiry} /> },
     { key: "next_inspection_date", label: "Next inspection", render: (r) => <ExpiryCell value={r.next_inspection_date} /> },
     { key: "status", label: "Status", render: (r) => <Badge status={r.status_display || statusLabel(r.status)} /> },
     { key: "actions", label: "", render: (r) => <ActionsMenu trailer={r} onAction={(action) => handleAction(r, action)} /> },
@@ -292,8 +291,6 @@ export default function TrailersPage() {
           { label: "Purchase date", value: formatDate(viewing.purchase_date) },
           { label: "Purchase cost", value: formatMoney(viewing.purchase_cost) },
           { label: "Current value", value: formatMoney(viewing.current_value) },
-          { label: "License expiry", value: <span className={EXPIRY_TONE_CLASS[expiryTone(viewing.license_expiry)]}>{formatDate(viewing.license_expiry)}</span> },
-          { label: "Insurance expiry", value: <span className={EXPIRY_TONE_CLASS[expiryTone(viewing.insurance_expiry)]}>{formatDate(viewing.insurance_expiry)}</span> },
           { label: "Next inspection", value: <span className={EXPIRY_TONE_CLASS[expiryTone(viewing.next_inspection_date)]}>{formatDate(viewing.next_inspection_date)}</span> },
           { label: "QR code UID", value: viewing.qr_code_uid || "—" },
           { label: "Documents", value: viewing.documents?.length

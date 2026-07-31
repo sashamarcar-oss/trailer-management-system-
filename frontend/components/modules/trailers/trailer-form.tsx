@@ -45,7 +45,6 @@ export function TrailerForm({ open, onOpenChange, onCreated }: TrailerFormProps)
         status: values.status,
         location: values.location,
         nextInspection: values.nextInspection,
-        insuranceExpiry: values.insuranceExpiry,
       });
       onCreated(created);
       toast.success(`Trailer ${values.trailerNumber} added`);
@@ -146,17 +145,10 @@ export function TrailerForm({ open, onOpenChange, onCreated }: TrailerFormProps)
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="nextInspection">Next inspection date</Label>
-              <Input id="nextInspection" type="date" {...register("nextInspection")} />
-              {errors.nextInspection && <p className="text-xs text-red-600 mt-1">{errors.nextInspection.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="insuranceExpiry">Insurance expiry date</Label>
-              <Input id="insuranceExpiry" type="date" {...register("insuranceExpiry")} />
-              {errors.insuranceExpiry && <p className="text-xs text-red-600 mt-1">{errors.insuranceExpiry.message}</p>}
-            </div>
+          <div>
+            <Label htmlFor="nextInspection">Next inspection date</Label>
+            <Input id="nextInspection" type="date" {...register("nextInspection")} />
+            {errors.nextInspection && <p className="text-xs text-red-600 mt-1">{errors.nextInspection.message}</p>}
           </div>
 
           <DialogFooter>

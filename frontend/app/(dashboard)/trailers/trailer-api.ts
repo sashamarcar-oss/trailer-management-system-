@@ -6,7 +6,6 @@ export interface TrailerListParams {
   status?: string
   trailerType?: string
   yardLocation?: string
-  insuranceExpiryBefore?: string
   nextInspectionBefore?: string
   ordering?: string
   page?: number
@@ -19,7 +18,7 @@ function clean(payload: TrailerPayload): Record<string, unknown> {
     if (value === undefined) return
     if (typeof value === "string" && value.trim() === "") {
       // Send null for optional dates/decimals that were cleared, empty string for text.
-      out[key] = ["purchase_date", "purchase_cost", "current_value", "gps_lat", "gps_lng", "license_expiry", "insurance_expiry", "next_inspection_date", "year"].includes(key)
+      out[key] = ["purchase_date", "purchase_cost", "current_value", "gps_lat", "gps_lng", "next_inspection_date", "year"].includes(key)
         ? null
         : ""
       return
@@ -37,7 +36,6 @@ export const trailerApi = {
         status: params.status || undefined,
         trailer_type: params.trailerType || undefined,
         yard_location: params.yardLocation || undefined,
-        insurance_expiry_before: params.insuranceExpiryBefore || undefined,
         next_inspection_before: params.nextInspectionBefore || undefined,
         ordering: params.ordering || undefined,
         page: params.page || undefined,
